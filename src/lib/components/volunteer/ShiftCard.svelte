@@ -71,7 +71,7 @@
 	};
 </script>
 
-<InfoCard title={when} testid="task-shift">
+<InfoCard title={when}>
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
@@ -460,6 +460,7 @@
 					action={cancel}
 					label={m.volunteer_work_order_view_cancel_shift_label()}
 					data-testid="cancel-shift"
+					data-shift={shift.id}
 					variant="ghost"
 					size="sm"
 					class="text-error"

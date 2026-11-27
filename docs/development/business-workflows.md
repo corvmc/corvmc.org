@@ -675,7 +675,7 @@ through `contact-service.ts`. Staff can send a contact-sheet link (`issueContact
 `/act/[token]` for 30 days, with no session, and cannot change its name. The person it types is
 written by `writeActContactUnguarded()`: an email already on file updates that contact, and
 without an email the act's own earlier entry is updated. A show's contact is
-`production_slot.contact_id`, picked on the Run of show tab from that act's people
+`production_slot.contact_id`, picked from that act's people
 (`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
 The same page lists the act's own booked shows from `offered` on, upcoming and the last 90 days
 (`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
@@ -741,14 +741,15 @@ events use RSVP instead.
   default, so undated drafts stay listed). Each row opens its listing,
   or its project when it has none. Venues and every market's vendor applications are the
   Calendar's other views (#2766).
-- **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
-  every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
-  else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
-  to, so a staffer arriving from a shift, a reservation or a notification lands on the
-  least-privileged useful view. `/staff/events/[id]/production` is the console — the full edit
-  form, ticketing, the ticket ledger, poster upload, the room, volunteer shifts — and redirects
-  to the general view for a non-CMC row. Privilege is additive at the deeper address, which is
-  what makes it gateable later without re-pointing every inbound link.
+- **The detail view is one page with tabs (#3270).** `/staff/events/[id]` has a fixed header
+  (title, status, date line, "Posted by", the next step — Publish, or Approve / Turn down — plus
+  Share and a More menu), a sidebar on every tab (the poster; for a CMC show its Crew and open
+  Tasks) and tabs: **Listing**, **Production** (CMC shows), **Vendors** (markets) and
+  **History**. It opens on Listing, which is also where creating an event lands, and is the
+  address `entity-href` resolves every event ref to. `?tab=` addresses the others; a tab the
+  event does not have opens Listing. The old `/production` and `/vendors` addresses redirect to
+  their tabs. The two-hour window of what else is on (`listEventsNear`) is now a "Possible
+  duplicate" warning in a community listing's Approve dialog; approval is still allowed.
 - **Staff lineup edits carry a consent rule.** `setStaffEventLineup` passes
   `asStaff: source === 'cmc'`. Staff booked a production, so acts they name there are already
   agreed; on a member's listing a newly linked act stays `pending` and the band is invited,
@@ -758,6 +759,15 @@ events use RSVP instead.
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a
   linked `bookerType: 'event_listing'` reservation; `checkRebookNeeded()` handles time changes.
+  `publish()` with `checkListing` (the staff Publish dialog's `publishEvent`) checks three fields
+  on every source (title, start date and time, description), through `listingGaps()` in
+  `event/show-readiness.ts`; the member, band, group and committee callers cannot acknowledge a
+  warning and publish unchecked. A gap is a warning: the dialog links each
+  one to its Listing tab field, and Publish anyway needs a reason and writes
+  `event.published_over_warnings` with the gap keys. Not poster or production status at publish,
+  because the owner set the three missing fields (#3271); `showBlockers` keeps those for the
+  staff dashboard. `updateEvent` also takes `releaseHold` (cancels the linked hold, keeps the
+  listing) and, for band and community listings only, `lineup`.
   Recurring events expand nightly via the same generation job as reservations (workflow 2).
 - **Purchase:** public event page → `purchaseTickets` form in `events.remote.ts` — creates
   `pending` tickets via `createTickets()` in `ticket/ticket-service.ts` under a fresh
@@ -804,6 +814,15 @@ events use RSVP instead.
   emits `event.cancelled` so every holder is notified with the refund note.
 - **RSVP / comps:** `event/rsvp-service.ts`; staff `compTickets` form creates valid
   tickets with no charge.
+- **Guests per act (#3274):** `ticket.event_band_id` (nullable, set null) ties a free ticket to
+  one act's credit. `addActGuest` / `removeActGuest` (`event.manageGuests`, scoped to the show the
+  credit or ticket is on, read from the row) go through `ticket/guest-service.ts`: one seat per
+  guest, `issueFreeTickets` (so `ticket.purchased` sends the ticket) and `recordTicketComp`.
+  Guests count against `ticket_sale.quantity` like any issued ticket. `writeLineup` cancels the
+  `pending` and `valid` guests of every dropped credit in the same `db.batch` as the delete, so
+  every path that removes an act cancels them; `checked_in` stays and nobody is emailed. A
+  credit that goes by `directory_entry` cascade leaves its guests valid with a null act. Not
+  removing the comp button, because band-run events still use it (#3274).
 
 ### Door sales
 
@@ -830,6 +849,16 @@ Cash is recorded from any browser.
 - **Door list:** the shift page's Check people in list and `checkInAsVolunteer` take
   `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
   on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
+- **Till count (#3273):** the Till counts card on both check-in screens (`TillCount.svelte`, on
+  `/staff/events/[id]/check-in` and the volunteer shift's check-in page) records one count per
+  handoff through `countTill`, as `finance.collect` on that show and as the signed-in member.
+  `removeTillCount` takes the show from the count's row: its own counter may remove it while they
+  hold the door grant, and `production.run` on the project may remove any. A removal is audited
+  (`production.till_count_removed`, with the amount and who counted it), because a count is a
+  cash record. A role that carries
+  `event.checkIn` without `finance.collect` sees no card. Not a refusal when the same person
+  counts twice or alone, because a small night has one door person; `oneCounter` warns at
+  settlement (#3273).
 - **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
   $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. A card
   sale opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
@@ -2456,19 +2485,29 @@ restore crew shifts or retract a cancellation notice.
    show, the advance, the door take, expenses, poster art, and the listing's description and
    times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
    `project_committee`, or one owning a live deliverable on the show's project. Staff and the
-   event lead hold it too. The committees granted it are Booking, Production, Art and
+   event lead hold it too, the lead through the Event lead role (item 4). The committees granted it are Booking, Production, Art and
    Merchandise, and Communications. `production.book` is what binds CMC outside it: the deal terms
    (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
-   `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
+   `confirmed` or `cancelled`, and cancelling a series. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
-3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+3. The event page's Production tab (`/staff/events/[id]?tab=production`) reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
-4. **Overview** tab → `updateProduction` (times and notes) and
-   `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
-   then holds `production.run` on that show and opens the staff panel while it is open).
-   The lead is a volunteer position with no shift: screens show the lead as crew beside the
-   show's shifts. Giving the lead hours or a volunteer role is a model change to propose on an
-   issue first.
+4. The Production tab's record card → `updateProduction` (times and notes). The event lead is a
+   volunteer task with no shift (#3274): the **Event lead** role (`EVENT_LEAD_VOLUNTEER_ROLE`,
+   matched by name) carries `production.run` and `event.manageGuests` through
+   `volunteer_role_capability`. `createProduction` makes the show's task
+   (`ensureLeadTask`, idempotent; none when staff have not created the role), and the sidebar's
+   **Crew** box assigns it with the shared staffing component (`CrewAssign` → `TaskStaffing`),
+   guarded `volunteer.manageRoster`. The grant is per show, through `workOrderAssignee` and
+   `roleGrantAllows`: `roleGrantAllowsOnProject` lets project-scoped `production.run` checks
+   (`can`, `requireProjectCommittee`) see it. It starts when the lead is named and ends
+   `graceDays` (7) after the show, with no lead time and so no 90-day cap. It also opens the
+   staff panel while the show is open (`holdsLeadOnOpenShow`). The old
+   `production.producer_user_id` grant (`leadsProject`; the `setShowLead` form is gone, so nothing sets it) still works beside it
+   until a later change retires it. Not `production.producer_user_id`, because a lead is a
+   volunteer task with no shift, and hours, claiming and the task's page already exist for one
+   (#3274). Naming the lead moved from `production.book` to `volunteer.manageRoster`, so bookers
+   lose the Assign button.
 5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless
@@ -2480,10 +2519,23 @@ restore crew shifts or retract a cancellation notice.
    `done` from `completed` on, `declined` when cancelled, and `open` again if walked
    back. `reopenProduction` (guard `production.reopen`) is the only way out of a
    terminal state.
-6. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
-   A payout is never edited: undo writes reversing ledger rows for that act alone
+6. The event header's **Settle event** button (from the show's start time) opens the Settle dialog
+   (`SettleDialog.svelte`, #3273), which reads `settle` from `getStaffEventPage`: the net after
+   costs, the staff count form (`recordStaffCount`, `production.run`, shown to those who hold
+   it) with the door warnings, and one row per unpaid act with an editable payout, prefilled from
+   the deal, and a **Donated set** box that records zero. **Record payouts** → `recordPayouts`
+   (`finance.refund`) writes every row through `recordSlotPayout`, skips an act already paid, and
+   refuses a slot of another production before writing any; a retry finishes the rest, so it is
+   not all-or-nothing. When every act is paid (`Settlement.settled`) the header shows a Settled
+   badge and the button reads **View settlement**: the same figures, read-only. A payout is
+   never edited: `undoActPayout` writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
-   recorded again. Both are audited.
+   recorded again. All are audited. The Production tab has no settlement section: the dialog is
+   the one place the night's figures are settled. Not a fully read-only View settlement, because
+   nothing else corrects a payout: the dialog keeps a per-act **Undo payout**, for
+   `finance.refund` holders and on a show that is not closed (#3273). Not a Settlement section
+   on the Production tab beside the dialog, because two homes for one set of figures drift
+   (#3273).
 7. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
@@ -2491,7 +2543,10 @@ restore crew shifts or retract a cancellation notice.
 8. Productions (`/staff/productions`) reads through `getStaffProductions`: `listProductions()`
    reads `production` joined to its project, and left-joins the listing and its `venue` (both
    1:1, so no fan-out).
-9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
+9. **Lineup** and **Run of show** on the Production tab → the remotes in `productions.remote.ts`:
+   `addLineupAct` / `removeLineupAct` (`production.book`, through `lineup-service.ts`, which keeps the
+   credit and its set together), `setRunOfShowTime` / `markRunOfShowDone` / `updateRunOfShowSlot`
+   (`production.run`; the changeover is one per show, `production.changeover_minutes`) →
    `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
    `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
    never stored by hand: `computeSetTimes` in `production/run-of-show.ts` walks the slots
@@ -2507,15 +2562,20 @@ restore crew shifts or retract a cancellation notice.
     show's tickets' `ticket_sales`, `fee_coverage` and `card_fees` rows, found through
     `ticket.purchaseId` because no ticket row carries the group (#2733), plus its share of the
     door. Cash sales recorded at the door are ticket rows like any other, so they reach both
-    sides through the ledger. `recordDoorTake`
-    (`production.run`) records the drawer and count, and stamps whoever changed the figure as
-    the counter. `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
+    sides through the ledger. The door cash is counted in `production_till_count` (#3273): one
+    row per handoff, each with who counted it and when, and at most one staff count.
+    `recordStaffCount` (`production.run`) replaces the staff row and sets the headcount and
+    split in one batch; an empty cash field clears the count. The settlement's cash is the
+    staff count when there is one, else the handoffs' sum, else nobody counted.
+    `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
     `doorSplitActsPercent` or the house `DOOR_SPLIT_ACTS_PERCENT`; a short drawer splits nothing.
-    A drawer that differs from the recorded cash sales warns on the console, and never blocks
-    (#2800).
-    `recordDoorRecount` records a second count by somebody else; the first counter is
-    refused. One count, or two that differ, warns on the console and on a move to `settled`
-    or `closed`, and never blocks (#2722). Expenses come from `production_expense`. Each act's
+    A drawer that differs from the recorded cash sales warns in the Settle dialog, and never
+    blocks (#2800). Only one kind of count, a staff count that differs from the handoffs' sum, or
+    one person behind the staff count and every handoff (`oneCounter`) warns in the dialog and on a
+    move to `settled` or `closed`, and never blocks. Not a refusal when one person counts the
+    till, because a small night has one door person; it warns as `oneCounter` and is recorded
+    (#3273, reversing the #2722 refusal). `Settlement.settled` is derived from the recorded
+    payouts (every act paid), not from the production's status. Expenses come from `production_expense`. Each act's
     suggested payout comes from its deal, and a guarantee above what buyers sent the acts is
     a collective top-up. Door cash never goes to Stripe.
 11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
@@ -2533,7 +2593,10 @@ restore crew shifts or retract a cancellation notice.
     live work order anchored to it by the same delta, in the same batch.
 13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
     revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
-    and top-ups count as spend; the pool passes through and never does.
+    and top-ups count as spend; the pool passes through and never does. The project's
+    Budget page lists that cost sheet with Add and Remove (`production.run`, locked once the
+    show is closed or cancelled); a festival parent lists only its own production's lines,
+    and each child keeps its own Budget page (#3273).
 14. **Festivals and runs** (#2543). A
     project, usually a show's, can name another project as its parent (`parent_project_id`),
     set from Edit project on `/staff/tasks/projects/[id]` with `project.manage`. Each night
@@ -2542,7 +2605,7 @@ restore crew shifts or retract a cancellation notice.
     lists each one's cash spend in `parts`, which the budget page shows. Parents are one
     level deep: `updateProject` refuses a project as its own parent, a parent that has a
     parent, and a parent as a child (`ProjectParentError`, 400).
-15. **Rider against stock** (#2724). The Advance tab's Requested gear card reads
+15. **Rider against stock** (#2724). The Production tab's Requested gear card reads
     `getEventRiderStock` in `production/rider-stock-service.ts`, inside
     `getStaffEventProduction`. It takes each `venue` rider element of the acts on the bill and
     matches it to the catalog. A staff link (`rider_element.inventory_item_id`, set by
@@ -2564,10 +2627,12 @@ restore crew shifts or retract a cancellation notice.
   committees.
 - `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
   cost sheet.
+- `production_till_count` — the door cash counts, one row per handoff and at most one staff
+  count (#3273).
 - `financial_entry` — ticket rows read through the show's tickets, payout and expense rows by
-  settlement group. Door cash stays
-  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`, and the counter and
-  second count beside them).
+  settlement group. The headcount and
+  the door split stay on `production` (`doorCount`, `doorSplitActsPercent`). The six
+  `doorCash*` columns there are unused since #3273.
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
@@ -2863,7 +2928,7 @@ A market vendor is an organization (#2622). Open question: #1504 (what the publi
 
 ### The story
 
-Staff make a listing a market day on `/staff/events/[id]/vendors`, setting when applications
+Staff make a listing a market day on its event page's Vendors tab (`/staff/events/[id]?tab=vendors`), setting when applications
 close and how many tables there are. The public event page then shows **Apply for a table**.
 A vendor with no account fills in `/events/[id]/vendors/apply`, and staff accept each vendor
 with a table label, waitlist or decline. Each way a message goes to the vendor by email.

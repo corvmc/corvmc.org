@@ -115,6 +115,8 @@
 	<Action
 		action={step}
 		label={move.label}
+		data-testid="production-move"
+		data-to={move.to}
 		variant="ghost"
 		size="sm"
 		onsuccess={(r) => done(r, `Production ${move.to}`)}

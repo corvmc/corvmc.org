@@ -5,6 +5,7 @@ import { grantRuleFor, type Capability } from '#lib/config.js';
 import {
 	leadsProject,
 	projectCommitteeGrantsFor,
+	roleGrantAllowsOnProject,
 	SHOW_LEAD_CAPABILITY
 } from '#lib/server/capability/capability-grants.js';
 import { allowlisted, committeeAllows } from '#lib/server/capability/grant-rules.js';
@@ -156,8 +157,13 @@ export async function requireProjectCommittee(
 		}
 	}
 	if (await can(cover)) return { user, groups: [], via: 'staff' };
-	if (projectId && cover === SHOW_LEAD_CAPABILITY && (await leadsProject(user.id, projectId))) {
-		return { user, groups: [], via: 'lead' };
+	if (projectId && cover === SHOW_LEAD_CAPABILITY) {
+		if (
+			(await leadsProject(user.id, projectId)) ||
+			(await roleGrantAllowsOnProject(user.id, cover, projectId))
+		) {
+			return { user, groups: [], via: 'lead' };
+		}
 	}
 	throw error(403, 'Not on a committee taking part in this project');
 }

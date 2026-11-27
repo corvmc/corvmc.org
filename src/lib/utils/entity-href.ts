@@ -234,7 +234,10 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		case 'market_vendor':
 			if (ref.eventId && can('event.manage'))
-				out.push({ panel: 'staff', href: resolve(`staff/events/${ref.eventId}/vendors`) });
+				out.push({
+					panel: 'staff',
+					href: withQuery(resolve(`staff/events/${ref.eventId}`), 'tab=vendors')
+				});
 			break;
 	}
 

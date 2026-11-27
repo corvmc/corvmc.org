@@ -149,6 +149,9 @@ const shiftPageOffers: Record<string, string | null> = {
 	'incident.file': 'incidentEventId',
 	// The event page offers the recap upload, and the shift page links the event.
 	'event.uploadRecap': null,
+	// The event lead works from the event page: its Crew box, guest lists and show panel.
+	'event.manageGuests': null,
+	'production.run': null,
 	'market.host': 'vendorHost'
 };
 

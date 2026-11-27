@@ -27,6 +27,19 @@ import {
 	listConfirmedSignupsForEvents
 } from '#lib/server/volunteer/volunteer-signup-service.js';
 import { listReadableArticles, resolveHelpReader } from '#lib/server/help/help-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import {
+	eventOfProduction,
+	projectOfEvent,
+	projectOfProduction
+} from '#lib/server/production/production-scope.js';
+import { tillSummary } from '#lib/server/production/till-summary.js';
+import {
+	handoffOwner,
+	recordHandoff,
+	removeHandoff
+} from '#lib/server/production/till-count-service.js';
 
 /**
  * Every door remote names the show it acts on. Staff hold `finance.collect`
@@ -185,3 +198,72 @@ export const simulateDoorTap = command(z.string().min(1), async (paymentIntentId
 	const intent = completeFakeTerminalPayment(paymentIntentId);
 	await (donation ? fulfillDoorDonation(intent) : fulfillDoorSale(intent));
 });
+
+/**
+ * The till counts of the show, as the people at the door see them. Null when
+ * the show has no production to settle against. `own` marks the caller's rows,
+ * the ones they can take back.
+ */
+export const getTillCounts = query(z.string().min(1), async (eventId) => {
+	const caller = await requireDoorSeller(eventId);
+	const announced = await projectOfEvent(eventId);
+	if (!announced?.productionId) return null;
+	const till = await tillSummary(announced.productionId);
+	return {
+		handoffs: till.handoffs.map((h) => ({
+			id: h.id,
+			cashCents: h.cashCents,
+			byName: h.byName,
+			at: h.at,
+			own: h.byUserId === caller.id
+		})),
+		totalCents: till.handoffTotalCents
+	};
+});
+
+/**
+ * One count of the till at a handoff, as the signed-in member. A till counted
+ * by one person only warns at settlement, so nothing here refuses on who counts.
+ */
+export const countTill = form(
+	z.object({
+		eventId: z.string().min(1),
+		cashCents: z.number().int().min(0).max(100_000_000)
+	}),
+	async ({ eventId, cashCents }) => {
+		const counter = await requireDoorSeller(eventId);
+		const announced = await projectOfEvent(eventId);
+		if (!announced?.productionId) error(404, 'This event has no production to count against');
+		await recordHandoff(announced.productionId, counter.id, cashCents);
+		await getTillCounts(eventId).refresh();
+		return { success: true };
+	}
+);
+
+/**
+ * Taking a count back. The show comes from the row, never the form: its own
+ * counter may remove it while they hold the door grant, and anyone with
+ * `production.run` on the project may remove any.
+ */
+export const removeTillCount = form(
+	z.object({ countId: z.string().min(1) }),
+	writesAudit('production.till_count_removed', async (data) => {
+		const user = requireUser();
+		const handoff = await handoffOwner(data.countId);
+		if (!handoff) error(404, 'That till count is no longer on the show');
+		const eventId = await eventOfProduction(handoff.productionId);
+		const own =
+			handoff.countedByUserId === user.id &&
+			eventId !== null &&
+			(await can('finance.collect', { eventId }));
+		if (!own) {
+			await requireProjectCommittee(
+				await projectOfProduction(handoff.productionId),
+				'production.run'
+			);
+		}
+		await removeHandoff(data.countId);
+		if (eventId) await getTillCounts(eventId).refresh();
+		return { success: true };
+	})
+);

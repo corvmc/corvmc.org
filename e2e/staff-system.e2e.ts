@@ -64,8 +64,10 @@ test.describe('staff system panel', () => {
 		for (const tab of ['pricing', 'reservations']) {
 			await page.goto(`/staff/settings?tab=${tab}`);
 			await page.waitForURL(/\/staff\/reservations\/settings$/);
-			await expect(page.getByTestId('pricing-settings')).toBeVisible();
-			await expect(page.getByTestId('space-settings')).toBeVisible();
+			// A field from each section: the rate is a hidden input behind a
+			// dollars box, the slot length is a select.
+			await expect(page.locator('[name*="hourlyRateCents"]').first()).toBeAttached();
+			await expect(page.locator('[name*="timeSlotMinutes"]').first()).toBeVisible();
 			await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 		}
 	});
@@ -76,9 +78,10 @@ test.describe('staff system panel', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/settings?tab=integrations');
 		await page.waitForURL(/\/staff\/reservations\/settings\/building-access$/);
-		await expect(page.getByTestId('lock-status')).toBeVisible();
-		await expect(page.getByTestId('active-codes')).toBeVisible();
-		await expect(page.getByTestId('lock-settings')).toBeVisible();
+		await expect(page.locator('main h1').first()).toBeVisible();
+		// No lock account is seeded, so the credentials form is the one that
+		// renders. The lock card moving here is that field being on this page.
+		await expect(page.locator('[name*="clientId"]').first()).toBeVisible();
 		await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	});
 });

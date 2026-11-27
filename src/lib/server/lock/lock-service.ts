@@ -69,8 +69,8 @@ export interface LockJobSummary {
 	errors: string[];
 	/**
 	 * Failures the next run retries by itself, logged without failing the run:
-	 * a delete of an already-expired temporary user, whose code no longer opens
-	 * the door. Absent on runs recorded before #3277.
+	 * one U-tec read or delete of a single lock user (cleanup, member-code sync
+	 * confirmation). Absent on runs recorded before #3277.
 	 */
 	warnings: string[];
 }
@@ -119,7 +119,7 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 	const provisioned = await step('Provisioning', 0, () => provisionDailyAccess(errors));
 	const confirmed =
 		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
-		(await step('Member code sync', 0, () => reconcileMemberCodeSync(errors)));
+		(await step('Member code sync', 0, () => reconcileMemberCodeSync(warnings)));
 	cleaned += await step('Cancelled-booking sweep', 0, () => revokeCancelledAccess(errors));
 	const fallback = await step('Fallback code', { active: null, rotated: false }, () =>
 		maintainFallbackCode(errors)
@@ -647,6 +647,9 @@ async function cleanupPreviousDayAccess(errors: string[], warnings: string[]): P
 		for (const u of users) {
 			if (u.type !== 2) continue;
 
+			// A failed read or delete is a warning, not an error: the next run
+			// re-lists every type-2 user and retries, and the lock enforces each
+			// user's window meanwhile (#3277, #3333).
 			let end: Date;
 			try {
 				const detail = await getLockUser(u.id);
@@ -655,14 +658,12 @@ async function cleanupPreviousDayAccess(errors: string[], warnings: string[]): P
 				end = buildDateInTz(datePart, timePart, tz);
 			} catch (err) {
 				const msg = `Failed to read lock user ${u.id}: ${(err as Error).message}`;
-				console.error(msg);
-				errors.push(msg);
+				console.warn(msg);
+				warnings.push(msg);
 				continue;
 			}
 			if (end >= now) continue;
 
-			// A warning, not an error: the next run re-lists every type-2 user and
-			// retries, and the expired code no longer opens the door (#3277).
 			try {
 				await removeTemporaryUser(u.id);
 				count++;

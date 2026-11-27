@@ -21,6 +21,7 @@
 	} from '#lib/remote/events.remote.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import TillCount from '#lib/components/events/TillCount.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -74,6 +75,10 @@
 		checkIn={(ticketId) => scanTicketIn({ ticketId, eventId: data.event.id })}
 		identify={(code) => identifyTicketCode({ code, eventId: data.event.id })}
 	/>
+
+	{#if data.canCountTill}
+		<TillCount eventId={data.event.id} />
+	{/if}
 
 	<!-- Search -->
 	<input

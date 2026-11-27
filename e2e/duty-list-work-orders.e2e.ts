@@ -37,21 +37,19 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.locator('[data-testid="task-chips"] [data-chip="unassigned"]').click();
 		await expect(page).toHaveURL(/chip=unassigned/);
 		await expect(
-			page.locator(`main table a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
+			page.locator(`a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();
 	});
 
-	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
+	test('and the show it is for links to it', async ({ page }) => {
 		await loginAsStaff(page);
-		// The console is tabbed, and the advance work is the Advance tab's whole
-		// subject. `?tab=` is the addressable form, so this also pins that a link
-		// somebody pastes lands where it says it does.
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
+		// The advance work is on the show's Production tab (#3270). `?tab=` is the
+		// addressable form, so this also pins that a pasted link lands there.
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		await expect(page.locator('[role="tabpanel"][aria-labelledby="tab-advance"]')).toBeVisible();
-		// The show's related tasks (#2630) list it beside the shifts card.
+		// The show reaches its open, shiftless task (#3270), wherever the page puts it.
 		await expect(
-			page.locator(`[data-testid="related-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
+			page.locator(`a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();
 	});
 

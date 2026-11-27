@@ -168,8 +168,7 @@ describe('addSlot', () => {
 		const insert = calls.find((c) => c.op === 'insert')!;
 		expect(insert.values).toMatchObject({
 			sortOrder: 2,
-			setLengthMinutes: 45,
-			changeoverMinutes: 10
+			setLengthMinutes: 45
 		});
 	});
 
@@ -207,19 +206,9 @@ describe('updateSlot', () => {
 		expect(calls.filter((c) => c.op === 'select')).toHaveLength(1);
 	});
 
-	// A tech note cannot move a set time, and the guard keeps the common edit to
-	// one round trip.
-	it('does not recompute for a tech note', async () => {
-		writeResults = [[{ productionId: 'prod-1' }]];
-
-		await updateSlot('slot-a', { techNotes: 'Needs a wedge' });
-
-		expect(calls.filter((c) => c.op === 'select')).toHaveLength(0);
-	});
-
 	it('throws when the slot is gone', async () => {
 		writeResults = [[]];
-		await expect(updateSlot('slot-a', { techNotes: 'x' })).rejects.toThrow(SlotNotFoundError);
+		await expect(updateSlot('slot-a', { setLengthMinutes: 20 })).rejects.toThrow(SlotNotFoundError);
 	});
 });
 

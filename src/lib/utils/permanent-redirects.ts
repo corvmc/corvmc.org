@@ -30,6 +30,8 @@ export const permanentRedirectSources: readonly string[] = [
 	'/staff/contractors/[id]',
 	'/staff/contractors/jobs',
 	'/staff/credits',
+	'/staff/events/[id]/production',
+	'/staff/events/[id]/vendors',
 	'/staff/flags',
 	'/staff/flags/equipment',
 	'/staff/flags/equipment/[id]',

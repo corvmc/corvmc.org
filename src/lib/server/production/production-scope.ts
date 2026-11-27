@@ -56,6 +56,17 @@ export async function projectOfEvent(
 	return row ?? null;
 }
 
+/** The listing that announces a production: the one on its project. Null when there is none. */
+export async function eventOfProduction(productionId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ eventId: eventListing.id })
+		.from(production)
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
+		.where(eq(production.id, productionId))
+		.limit(1);
+	return row?.eventId ?? null;
+}
+
 /** 409: the show's project already has its listing. */
 export class ProductionListingTakenError extends DomainError {
 	readonly httpStatus = 409;

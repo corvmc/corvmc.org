@@ -1,4 +1,8 @@
-import { production, productionExpense } from '../../src/lib/server/db/schema/production';
+import {
+	production,
+	productionExpense,
+	productionTillCount
+} from '../../src/lib/server/db/schema/production';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { project } from '../../src/lib/server/db/schema/project';
 import { batchInsert, db } from './db';
@@ -70,8 +74,6 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	add(past[0], 'closed', {
 		...schedule(past[0]?.startsAt ?? now),
 		producerUserId: producer,
-		billingNotes: '60/40 door split after the sound engineer.',
-		hospitalityNotes: 'Two vegetarian meals, case of water, parking passes for the van.',
 		internalNotes: 'Settled in cash the same night. Receipts in the folder.'
 	});
 	add(past[1], 'settled', {
@@ -91,8 +93,6 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 		// Met: the bill has as many acts as it asked for, so it is finished
 		// rather than short. The contrast with `upcoming[1]` is the point.
 		actsWanted: 3,
-		billingNotes: 'Guarantee against 70% of the door, whichever is greater.',
-		hospitalityNotes: 'Green room is the office. Coffee, and somebody has to move the desk.',
 		internalNotes: 'Backline is ours except the drum kit — headliner brings their own.'
 	});
 	// A bill that says out loud it is not finished. Six is comfortably above
@@ -193,6 +193,36 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 				category: 'other' as const,
 				amountCents: 12_000,
 				deductible: false
+			}
+		]);
+
+		// Two handoffs by two people and a staff count that matches their sum:
+		// the agreed case, with no warning to show.
+		const night =
+			events.find((e) => 'eventId' in settledShow && e.id === settledShow.eventId)?.startsAt ?? now;
+		const counter = users[1]?.id ?? producer;
+		const minutesAfter = (m: number) => new Date(night.getTime() + m * 60_000);
+		await batchInsert(productionTillCount, [
+			{
+				productionId: settledShow.id,
+				kind: 'handoff' as const,
+				cashCents: 21_000,
+				countedByUserId: producer,
+				countedAt: minutesAfter(90)
+			},
+			{
+				productionId: settledShow.id,
+				kind: 'handoff' as const,
+				cashCents: 18_500,
+				countedByUserId: counter,
+				countedAt: minutesAfter(180)
+			},
+			{
+				productionId: settledShow.id,
+				kind: 'staff' as const,
+				cashCents: 39_500,
+				countedByUserId: producer,
+				countedAt: minutesAfter(210)
 			}
 		]);
 	}

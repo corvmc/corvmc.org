@@ -5,10 +5,9 @@ import { production, productionSlot } from '#lib/server/db/schema/production.js'
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
 import { ticket } from '#lib/server/db/schema/ticket.js';
 import { and, asc, eq, inArray, isNotNull, isNull, sum } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/sqlite-core';
-import { user } from '#lib/server/db/schema/authentication.js';
 import { DOOR_SPLIT_ACTS_PERCENT } from '#lib/config.js';
-import { doorCheck, type DoorCheck } from '#lib/production/door-check.js';
+import type { DoorCheck } from '#lib/production/door-check.js';
+import { tillSummary, type TillCountLine } from './till-summary';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
 import { recordActPayout, reverseActPayout } from '#lib/server/finance/payout-entries.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
@@ -65,11 +64,15 @@ export interface DoorTake {
 	overridden: boolean;
 }
 
-/** Who counted the drawer, and whether a second person agreed (#2722). */
+/**
+ * Who counted the till and whether the counts agree (#3273). `oneCounter` is
+ * a warning: the staff count and every handoff were made by the same person.
+ */
 export interface DoorCounts {
 	check: DoorCheck;
-	first: { byName: string | null; at: Date | null };
-	second: { cashCents: number; byName: string | null; at: Date | null } | null;
+	oneCounter: boolean;
+	handoffs: TillCountLine[];
+	staff: TillCountLine | null;
 }
 
 export interface Settlement {
@@ -111,6 +114,11 @@ export interface Settlement {
 	unpaidActCount: number;
 	/** The collective's position once the acts and the costs are paid. */
 	netCents: number;
+	/**
+	 * Every act has a payout recorded. Derived from the payouts, not from the
+	 * production's status, which the owner is still revising (#3273).
+	 */
+	settled: boolean;
 }
 
 /**
@@ -168,39 +176,32 @@ export function splitDoorTake(input: {
 	};
 }
 
-const firstCounter = alias(user, 'door_first_counter');
-const secondCounter = alias(user, 'door_second_counter');
-
 export async function getSettlement(eventId: string): Promise<Settlement | null> {
 	const [prod] = await db
 		.select({
 			id: production.id,
 			status: production.status,
-			doorCashCents: production.doorCashCents,
 			doorCount: production.doorCount,
-			doorSplitActsPercent: production.doorSplitActsPercent,
-			countedAt: production.doorCashCountedAt,
-			countedBy: firstCounter.name,
-			recountCents: production.doorCashRecountCents,
-			recountedAt: production.doorCashRecountedAt,
-			recountedBy: secondCounter.name
+			doorSplitActsPercent: production.doorSplitActsPercent
 		})
 		.from(production)
-		.leftJoin(firstCounter, eq(firstCounter.id, production.doorCashCountedByUserId))
-		.leftJoin(secondCounter, eq(secondCounter.id, production.doorCashRecountedByUserId))
 		.where(announcedBy(eventId))
 		.limit(1);
 	if (!prod) return null;
 
+	const till = await tillSummary(prod.id);
 	const doorTakings = await getEventDoorTakings(eventId);
-	const door = splitDoorTake({ ...prod, recordedCashCents: doorTakings.cash.grossCents });
+	const door = splitDoorTake({
+		doorCashCents: till.cashCents,
+		doorCount: prod.doorCount,
+		doorSplitActsPercent: prod.doorSplitActsPercent,
+		recordedCashCents: doorTakings.cash.grossCents
+	});
 	const doorCounts: DoorCounts | null = door && {
-		check: doorCheck(prod.doorCashCents, prod.recountCents),
-		first: { byName: prod.countedBy, at: prod.countedAt },
-		second:
-			prod.recountCents === null
-				? null
-				: { cashCents: prod.recountCents, byName: prod.recountedBy, at: prod.recountedAt }
+		check: till.check,
+		oneCounter: till.oneCounter,
+		handoffs: till.handoffs,
+		staff: till.staff
 	};
 
 	// Revenue and pool come from the financial record rather than `payment_cache`,
@@ -319,6 +320,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		suggestedPayoutTotalCents,
 		paidTotalCents,
 		unpaidActCount,
+		settled: acts.length > 0 && unpaidActCount === 0,
 		// Expenses come out of the collective's share, not the pool — the acts'
 		// number is what buyers designated. `againstNet` is the per-act exception.
 		netCents: collectiveRevenueCents - expensesCents - (suggestedPayoutTotalCents - actsPoolCents)
@@ -380,6 +382,32 @@ export async function recordSlotPayout(
 		subject: { type: 'production', id: slot.productionId, label: slot.eventTitle },
 		details: { eventId: slot.eventId, slotId, actName, amountCents }
 	});
+}
+
+/**
+ * Record what every unpaid act was handed, from the Settle dialog's one form.
+ *
+ * Every slot is checked against the production before any is written, so a
+ * forged slot id refuses the whole batch. Slots already paid are skipped, not
+ * edited. Each slot's claim is its own conditional write, so a retry after a
+ * failure finishes the rest rather than paying anyone twice.
+ */
+export async function recordPayouts(
+	productionId: string,
+	payouts: { slotId: string; amountCents: number }[],
+	recordedByUserId: string
+): Promise<number> {
+	const slots = await Promise.all(payouts.map((p) => readSlotForPayout(p.slotId)));
+	if (slots.some((slot) => !slot || slot.productionId !== productionId)) {
+		throw new PayoutError('A band in this list is not on this show.');
+	}
+	let recorded = 0;
+	for (const [i, payout] of payouts.entries()) {
+		if (slots[i]!.paidCents !== null) continue;
+		await recordSlotPayout(payout.slotId, payout.amountCents, recordedByUserId);
+		recorded += 1;
+	}
+	return recorded;
 }
 
 /**

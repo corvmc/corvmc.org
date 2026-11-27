@@ -26,7 +26,7 @@
 </script>
 
 {#snippet permissions(labels: string[])}
-	<details class="text-sm" data-testid="why-permissions">
+	<details class="text-sm">
 		<summary class="cursor-pointer text-muted">{m.access_why_show_permissions_label()}</summary>
 		<ul class="mt-1 text-muted">
 			{#each labels as label, i (i)}
@@ -42,7 +42,7 @@
 
 {#if why.positions.length > 0}
 	<InfoCard title={m.access_why_positions_title()} state={why.positions.length}>
-		<ul class="flex flex-col gap-3" data-testid="why-positions">
+		<ul class="flex flex-col gap-3">
 			{#each why.positions as p (p.position)}
 				<li>
 					<div class="font-medium">{positionLabels[p.position]}</div>
@@ -58,7 +58,7 @@
 
 {#if why.departments.length > 0}
 	<InfoCard title={m.access_why_committees_title()} state={why.departments.length}>
-		<ul class="flex flex-col gap-3" data-testid="why-committees">
+		<ul class="flex flex-col gap-3">
 			{#each why.departments as d (d.groupId)}
 				<li>
 					<div class="font-medium">{d.name}</div>
@@ -67,7 +67,7 @@
 					</div>
 					<!-- Where its own-records grants reach: named on a project, or owning a task in it (#2959). -->
 					{#if showPermissions && d.projects.length > 0 && d.grants.some((g) => g.reach === 'owned')}
-						<div class="text-sm" data-testid="why-projects">
+						<div class="text-sm">
 							{m.access_why_on_projects_text({
 								projects: d.projects
 									.map((p) =>
@@ -97,7 +97,7 @@
 
 {#if why.shiftRoles.length > 0}
 	<InfoCard title={m.access_why_shift_roles_title()} state={why.shiftRoles.length}>
-		<ul class="flex flex-col gap-3" data-testid="why-shift-roles">
+		<ul class="flex flex-col gap-3">
 			{#each why.shiftRoles as r (`${r.roleName}:${r.eventId}`)}
 				<li>
 					<div class="font-medium">{r.roleName}</div>

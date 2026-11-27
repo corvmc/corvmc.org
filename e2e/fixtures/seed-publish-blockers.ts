@@ -11,11 +11,11 @@ import { eventListing } from '../../src/lib/server/db/schema/event';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { SEED_STAFF_ID } from './seed-staff-user';
 
-/** No poster and no description, so `publishBlockers` names both. */
+/** No poster and no description, so `publishBlockers` names the description. */
 export const SEED_BLOCKED_EVENT_ID = 'e2e-publish-blocked';
 export const SEED_BLOCKED_EVENT_TITLE = 'E2E Publish Not Ready Yet';
 
-/** Poster and description present, no production row — nothing blocking. */
+/** Title, start and description present — nothing blocking. */
 export const SEED_READY_EVENT_ID = 'e2e-publish-ready';
 export const SEED_READY_EVENT_TITLE = 'E2E Publish Ready To Go';
 

@@ -143,11 +143,7 @@
 		"id": "internal: a caller-supplied id for batching with the show it belongs to"
 	},
 	"src/lib/server/production/production-service.ts#updateProductionDetails(1)": {
-		"producerUserId": "elsewhere: setShowLead writes it through show-lead-service#setShowLead"
-	},
-	"src/lib/server/production/run-of-show-service.ts#updateSlot(1)": {
-		"actualEndAt": "elsewhere: markSlotTiming writes it on the night",
-		"actualStartAt": "elsewhere: markSlotTiming writes it on the night"
+		"producerUserId": "elsewhere: show-lead-service#setShowLead writes it; no form calls it since #3274"
 	},
 	"src/lib/server/project/decision-chain.ts#startProjectFromBallot(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
@@ -174,7 +170,8 @@
 	},
 	"src/lib/server/ticket/ticket-service.ts#createTickets(0)": {
 		"checkedInByUserId": "internal: door-sale checks in what it mints",
-		"discountWaived": "internal: documented as no longer written"
+		"discountWaived": "internal: documented as no longer written",
+		"eventBandId": "internal: guest-service#addGuest sets it from the act the form names"
 	},
 	"src/lib/server/ticket/ticket-service.ts#issueFreeTickets(0)": {
 		"actsCents": "internal: a paid order's split; a free ticket has none",
@@ -182,6 +179,7 @@
 		"collectiveCents": "internal: a paid order's split; a free ticket has none",
 		"contributionCents": "internal: a paid order's split; a free ticket has none",
 		"discountWaived": "internal: documented as no longer written",
+		"eventBandId": "internal: guest-service#addGuest sets it from the act the form names",
 		"feeCoveredCents": "internal: a paid order's split; a free ticket has none",
 		"unitPriceCents": "internal: a free ticket is 0, the default"
 	},

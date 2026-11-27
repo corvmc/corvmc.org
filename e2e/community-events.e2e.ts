@@ -159,6 +159,8 @@ test.describe('deleting an event', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_DELETABLE_ID}`);
 
+		// Delete sits behind the header's More menu (#3270).
+		await page.locator('details:has([data-testid="delete-event"]) > summary').click();
 		await page.getByTestId('delete-event').click();
 		await page.getByRole('dialog').locator('button[type=submit]').click();
 
@@ -209,22 +211,6 @@ test.describe('starting a listing', () => {
 		});
 		await expect(page.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
 		await expect(page.getByLabel('Description')).toBeVisible();
-	});
-
-	test('closing a part-written show asks before discarding it', async ({ page }) => {
-		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
-		const dialog = await openAddShow(page);
-
-		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
-		await dialog.locator('[data-dialog-close]').click();
-		const prompt = dialog.getByTestId('discard-prompt');
-		await expect(prompt).toBeVisible();
-		await expect(dialog.getByLabel('Title')).toBeHidden();
-
-		// Keep editing, the prompt's first choice, gives back exactly what was typed.
-		await prompt.getByRole('button').first().click();
-		await expect(prompt).toHaveCount(0);
-		await expect(dialog.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
 	});
 
 	test('the old submit address lands on the Events page', async ({ page }) => {

@@ -90,12 +90,15 @@ vi.mock('#lib/server/production/production-scope.js', () => scope);
 const service = {
 	createProduction: vi.fn(),
 	updateProductionDetails: vi.fn(),
+	markShowTiming: vi.fn(),
 	transitionProduction: vi.fn(async () => ({ moved: true, warnings: [] as string[] })),
 	reopenProduction: vi.fn()
 };
 vi.mock('#lib/server/production/production-service.js', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
+	markShowTiming: (...a: unknown[]) => service.markShowTiming(...a),
+	showStartsAt: async () => new Date('2026-11-06T03:00:00Z'),
 	transitionProduction: (...a: unknown[]) => service.transitionProduction(...(a as [])),
 	reopenProduction: (...a: unknown[]) => service.reopenProduction(...a)
 }));
@@ -119,9 +122,24 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
-const showLead = { setShowLead: vi.fn(), searchLeadCandidates: vi.fn(async () => []) };
+const lineup = { addActToShow: vi.fn(), removeActFromShow: vi.fn() };
+vi.mock('#lib/server/production/lineup-service.js', () => ({
+	addActToShow: (...a: unknown[]) => lineup.addActToShow(...a),
+	removeActFromShow: (...a: unknown[]) => lineup.removeActFromShow(...a)
+}));
+const outsideActs = { createExternalAct: vi.fn(async () => 'act-new') };
+vi.mock('#lib/server/directory/entry-service.js', () => ({
+	createExternalAct: (...a: unknown[]) => outsideActs.createExternalAct(...(a as []))
+}));
+const contacts = { addShowActContact: vi.fn() };
+vi.mock('#lib/server/directory/contact-service.js', () => ({
+	addShowActContact: (...a: unknown[]) => contacts.addShowActContact(...a)
+}));
+vi.mock('#lib/server/party/organization-service.js', () => ({
+	performerFor: async () => 'org-new'
+}));
+const showLead = { searchLeadCandidates: vi.fn(async () => []) };
 vi.mock('#lib/server/production/show-lead-service.js', () => ({
-	setShowLead: (...a: unknown[]) => showLead.setShowLead(...a),
 	searchLeadCandidates: (...a: unknown[]) => showLead.searchLeadCandidates(...(a as []))
 }));
 vi.mock('#lib/server/production/host-service.js', () => ({
@@ -137,16 +155,16 @@ vi.mock('#lib/server/production/run-of-show-service.js', () => ({
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
-const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn() };
+const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn(), recordPayouts: vi.fn() };
 vi.mock('#lib/server/production/settlement-service.js', () => ({
+	recordPayouts: (...a: unknown[]) => settlement.recordPayouts(...(a as [])),
 	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as [])),
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
-const doorCounts = { recordDoorTake: vi.fn(), recordDoorRecount: vi.fn() };
-vi.mock('#lib/server/production/door-count-service.js', () => ({
-	recordDoorTake: (...a: unknown[]) => doorCounts.recordDoorTake(...a),
-	recordDoorRecount: (...a: unknown[]) => doorCounts.recordDoorRecount(...a)
+const tillCounts = { recordStaffCount: vi.fn() };
+vi.mock('#lib/server/production/till-count-service.js', () => ({
+	recordStaffCount: (...a: unknown[]) => tillCounts.recordStaffCount(...a)
 }));
 
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
@@ -183,6 +201,8 @@ vi.mock('./events.remote', () => ({
 	getStaffEventProduction: () => ({ refresh }),
 	getStaffEvents: () => ({ refresh })
 }));
+
+vi.mock('./projects.remote', () => ({ getProjectDetail: () => ({ refresh: vi.fn() }) }));
 
 // The house shape for a remote spec: `form()` applies its schema and calls the
 // handler, so a payload the schema rejects never reaches the service — which is
@@ -269,12 +289,6 @@ const WRITES: Write[] = [
 		args: [{ id: 'prod-1', eventId: 'evt-1' }],
 		capability: RUN
 	},
-	// Booking appoints the lead; the lead then runs the show (#2726).
-	{
-		name: 'setShowLead',
-		args: [{ id: 'prod-1', eventId: 'evt-1', leadUserId: 'member-9' }],
-		capability: BOOK
-	},
 	{
 		name: 'searchShowLeadCandidates',
 		args: [{ eventId: 'evt-1', q: 'sam' }],
@@ -297,24 +311,31 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
-		name: 'recordDoorTake',
+		name: 'recordStaffCount',
 		args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }],
 		capability: RUN
 	},
+	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
+	// The lineup is the bill: confirming who plays is booking's, not production's.
 	{
-		name: 'recordDoorRecount',
-		args: [{ id: 'prod-1', eventId: 'evt-1', recountCents: 12_000 }],
+		name: 'addLineupAct',
+		args: [{ eventId: 'evt-1', name: 'Moon Pie', setLengthMinutes: 30 }],
+		capability: BOOK
+	},
+	{ name: 'removeLineupAct', args: [{ eventId: 'evt-1', slotId: 'slot-1' }], capability: BOOK },
+	{
+		name: 'setRunOfShowTime',
+		args: [{ id: 'prod-1', eventId: 'evt-1', row: 'firstSet', time: '20:00' }],
 		capability: RUN
 	},
-	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
 	{
-		name: 'addRunOfShowSlot',
-		args: [{ eventId: 'evt-1', productionId: 'prod-1', setLengthMinutes: 30 }],
+		name: 'markRunOfShowDone',
+		args: [{ id: 'prod-1', eventId: 'evt-1', row: 'doors', action: 'now' }],
 		capability: RUN
 	},
 	{
 		name: 'updateRunOfShowSlot',
-		args: [{ ...SLOT, setLengthMinutes: 30, changeoverMinutes: 10 }],
+		args: [{ ...SLOT, setLengthMinutes: 30 }],
 		capability: RUN
 	},
 	{
@@ -322,7 +343,6 @@ const WRITES: Write[] = [
 		args: [{ ...SLOT, direction: 'up' }],
 		capability: RUN
 	},
-	{ name: 'removeRunOfShowSlot', args: [SLOT], capability: RUN },
 	{ name: 'setRunOfShowTerms', args: [SLOT], capability: BOOK },
 	{
 		name: 'buildRunOfShowFromLineup',
@@ -360,8 +380,8 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
-		name: 'recordActPayout',
-		args: [{ ...SLOT, amountCents: 1000 }],
+		name: 'recordPayouts',
+		args: [{ productionId: 'prod-1', payouts: [{ slotId: 'slot-1', amountCents: 1000 }] }],
 		capability: 'finance.refund',
 		positionOnly: true
 	},
@@ -409,8 +429,11 @@ const allSpies = () =>
 		...flyers,
 		...settlement,
 		...expenses,
-		...doorCounts,
-		...showLead
+		...tillCounts,
+		...showLead,
+		...lineup,
+		...outsideActs,
+		...contacts
 	});
 
 beforeEach(() => {
@@ -496,13 +519,82 @@ describe('the production matrix', () => {
 		expect(listings.create).not.toHaveBeenCalled();
 	});
 
+	// The Budget page posts no event, and may post a forged project beside the production.
+	it('guards a cost added from the Budget page on the production’s project', async () => {
+		persona = 'production';
+		const line = { productionId: 'prod-1', label: 'PA', category: 'sound', amountCents: 500 };
+		await submit(productions.addProductionExpense, { ...line, projectId: 'proj-other' });
+		expect(requireProjectCommittee).toHaveBeenCalledWith('proj-show', 'production.run');
+		expect(expenses.addExpense).toHaveBeenCalledOnce();
+		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it('refuses a cost added to another show’s production from the Budget page', async () => {
+		persona = 'production';
+		const line = { productionId: 'prod-other', label: 'PA', category: 'sound', amountCents: 500 };
+		await expect(submit(productions.addProductionExpense, line)).rejects.toMatchObject({
+			status: 403
+		});
+		expect(expenses.addExpense).not.toHaveBeenCalled();
+	});
+
+	it('removes a cost from the Budget page, guarded by the line’s project', async () => {
+		persona = 'production';
+		await submit(productions.removeProductionExpense, { expenseId: 'exp-1' });
+		expect(scope.projectOfExpense).toHaveBeenCalledWith('exp-1');
+		expect(expenses.removeExpense).toHaveBeenCalledWith('exp-1');
+	});
+
+	describe('recordPayouts', () => {
+		const line = (extra: Record<string, unknown> = {}) => ({
+			productionId: 'prod-1',
+			payouts: [{ slotId: 'slot-1', amountCents: 1000, ...extra }]
+		});
+
+		it('records a donated set as zero whatever the amount says', async () => {
+			await submit(productions.recordPayouts, line({ donated: true, amountCents: 5000 }));
+			expect(settlement.recordPayouts).toHaveBeenCalledWith(
+				'prod-1',
+				[{ slotId: 'slot-1', amountCents: 0 }],
+				'staff-1'
+			);
+		});
+
+		it('records the typed amount, for the production it names', async () => {
+			await submit(productions.recordPayouts, line());
+			expect(settlement.recordPayouts).toHaveBeenCalledWith(
+				'prod-1',
+				[{ slotId: 'slot-1', amountCents: 1000 }],
+				'staff-1'
+			);
+		});
+
+		it('refuses an act with no amount that is not donated, before any service call', async () => {
+			await expect(
+				submit(productions.recordPayouts, line({ amountCents: undefined }))
+			).rejects.toBeDefined();
+			expect(settlement.recordPayouts).not.toHaveBeenCalled();
+		});
+
+		it('refuses a negative amount', async () => {
+			await expect(
+				submit(productions.recordPayouts, line({ amountCents: -1 }))
+			).rejects.toBeDefined();
+			expect(settlement.recordPayouts).not.toHaveBeenCalled();
+		});
+	});
+
 	it('refuses show work on a slot of a show the committee is not on', async () => {
 		persona = 'production';
 		await expect(
-			submit(productions.removeRunOfShowSlot, { eventId: 'evt-1', slotId: 'slot-other' })
+			submit(productions.updateRunOfShowSlot, {
+				eventId: 'evt-1',
+				slotId: 'slot-other',
+				setLengthMinutes: 30
+			})
 		).rejects.toMatchObject({ status: 403 });
 		expect(scope.projectOfSlot).toHaveBeenCalledWith('slot-other');
-		expect(runOfShow.removeSlot).not.toHaveBeenCalled();
+		expect(runOfShow.updateSlot).not.toHaveBeenCalled();
 	});
 
 	// The deal is org-wide (#2959): no show widens or narrows who may make it.
@@ -521,7 +613,7 @@ describe('the production matrix', () => {
 
 	it('reads the project off the slot, not off the eventId the form carries', async () => {
 		persona = 'production';
-		await submit(productions.removeRunOfShowSlot, SLOT);
+		await submit(productions.updateRunOfShowSlot, { ...SLOT, setLengthMinutes: 30 });
 		expect(scope.projectOfSlot).toHaveBeenCalledWith('slot-1');
 		expect(scope.projectOfEvent).not.toHaveBeenCalled();
 	});
@@ -638,8 +730,8 @@ describe('the details form is show work (#2959)', () => {
 	const base = { id: 'prod-1', eventId: 'evt-1' };
 
 	it.each([
-		['production', { billingNotes: 'new' }],
-		['booking', { loadInDate: '2031-04-17', loadInTime: '18:00' }]
+		['production', { internalNotes: 'new' }],
+		['booking', { changeoverMinutes: 20 }]
 	] as const)('lets %s, on the show, change any field', async (who, fields) => {
 		persona = who;
 		await submit(productions.updateProduction, { ...base, ...fields });
@@ -649,7 +741,7 @@ describe('the details form is show work (#2959)', () => {
 	it('refuses a committee not on the show', async () => {
 		persona = 'otherShow';
 		await expect(
-			submit(productions.updateProduction, { ...base, billingNotes: 'new' })
+			submit(productions.updateProduction, { ...base, internalNotes: 'new' })
 		).rejects.toMatchObject({ status: 403 });
 		expect(service.updateProductionDetails).not.toHaveBeenCalled();
 	});
@@ -660,28 +752,60 @@ describe('run of show validation', () => {
 	// refuse it before the service ever sees one.
 	it('refuses a zero-length set before the service is called', async () => {
 		await expect(
-			submit(productions.addRunOfShowSlot, {
-				eventId: 'evt-1',
-				productionId: 'prod-1',
-				setLengthMinutes: 0
-			})
+			submit(productions.addLineupAct, { eventId: 'evt-1', name: 'Moon Pie', setLengthMinutes: 0 })
 		).rejects.toThrow();
 
-		expect(runOfShow.addSlot).not.toHaveBeenCalled();
+		expect(lineup.addActToShow).not.toHaveBeenCalled();
 	});
 
-	it("passes a blank act through as a slot on nobody's poster", async () => {
-		await submit(productions.addRunOfShowSlot, {
+	it('adds an act by name alone without saving it as an outside act', async () => {
+		await submit(productions.addLineupAct, {
 			eventId: 'evt-1',
-			productionId: 'prod-1',
-			eventBandId: '',
+			name: 'Moon Pie',
 			setLengthMinutes: 45
 		});
 
-		expect(runOfShow.addSlot).toHaveBeenCalledWith(
+		expect(outsideActs.createExternalAct).not.toHaveBeenCalled();
+		expect(lineup.addActToShow).toHaveBeenCalledWith(
+			'evt-1',
 			'prod-1',
-			expect.objectContaining({ eventBandId: null, setLengthMinutes: 45 })
+			{ name: 'Moon Pie', bandId: undefined, actId: undefined },
+			45
 		);
+	});
+
+	it('saves a new outside act with its contact, then adds it', async () => {
+		await submit(productions.addLineupAct, {
+			eventId: 'evt-1',
+			name: 'Moon Pie',
+			newAct: true,
+			hometown: 'Eugene',
+			email: 'moon@example.com',
+			setLengthMinutes: 30
+		});
+
+		expect(outsideActs.createExternalAct).toHaveBeenCalledWith({
+			name: 'Moon Pie',
+			hometown: 'Eugene'
+		});
+		expect(contacts.addShowActContact).toHaveBeenCalledWith(
+			'org-new',
+			'proj-show',
+			'moon@example.com'
+		);
+		expect(lineup.addActToShow).toHaveBeenCalledWith(
+			'evt-1',
+			'prod-1',
+			{ name: 'Moon Pie', bandId: undefined, actId: 'act-new' },
+			30
+		);
+	});
+
+	it('refuses to remove an act without saying which', async () => {
+		await expect(submit(productions.removeLineupAct, { eventId: 'evt-1' })).rejects.toMatchObject({
+			status: 400
+		});
+		expect(lineup.removeActFromShow).not.toHaveBeenCalled();
 	});
 
 	// A cleared number field is dropped from the payload rather than sent as null,
@@ -722,37 +846,55 @@ describe('run of show validation', () => {
 		);
 	});
 
-	it('turns a blank note into null rather than an empty string', async () => {
-		await submit(productions.updateRunOfShowSlot, {
-			...SLOT,
-			setLengthMinutes: 30,
-			changeoverMinutes: 10,
-			techNotes: '   '
+	it('clears one row of the run of show with a blank time, leaving the others', async () => {
+		await submit(productions.setRunOfShowTime, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			row: 'curfew',
+			time: ''
 		});
 
-		expect(runOfShow.updateSlot).toHaveBeenCalledWith(
-			'slot-1',
-			expect.objectContaining({ techNotes: null, soundcheckAt: null })
-		);
+		const [, patch] = service.updateProductionDetails.mock.calls[0] as [
+			string,
+			Record<string, unknown>
+		];
+		expect(patch.curfewAt).toBeNull();
+		expect(patch.firstSetAt).toBeUndefined();
+	});
+
+	it('puts a small-hours time after midnight, on the morning after the show date', async () => {
+		await submit(productions.setRunOfShowTime, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			row: 'curfew',
+			time: '00:30'
+		});
+
+		const [, patch] = service.updateProductionDetails.mock.calls[0] as [string, { curfewAt: Date }];
+		expect(patch.curfewAt.getTime()).toBeGreaterThan(new Date('2026-11-06T03:00:00Z').getTime());
 	});
 });
 
-describe('the door counts name the caller as the counter (#2722)', () => {
-	it('passes the signed-in user, never a field, as each counter', async () => {
+describe('the staff count names the caller as the counter (#3273)', () => {
+	it('passes the signed-in user, never a field, and an empty cash box clears the count', async () => {
 		persona = 'production';
-		await submit(productions.recordDoorTake, {
+		await submit(productions.recordStaffCount, {
 			id: 'prod-1',
 			eventId: 'evt-1',
 			doorCashCents: 500_00,
 			countedByUserId: 'someone-else'
 		});
-		expect(doorCounts.recordDoorTake).toHaveBeenCalledWith('prod-1', 'production-1', {
+		expect(tillCounts.recordStaffCount).toHaveBeenCalledWith('prod-1', 'production-1', {
 			cashCents: 500_00,
 			count: null,
 			splitActsPercent: null
 		});
 		persona = 'staff';
-		await submit(productions.recordDoorRecount, { id: 'prod-1', eventId: 'evt-1' });
-		expect(doorCounts.recordDoorRecount).toHaveBeenCalledWith('prod-1', 'staff-1', null);
+		await submit(productions.recordStaffCount, { id: 'prod-1', eventId: 'evt-1' });
+		expect(tillCounts.recordStaffCount).toHaveBeenLastCalledWith('prod-1', 'staff-1', {
+			cashCents: null,
+			count: null,
+			splitActsPercent: null
+		});
 	});
 });

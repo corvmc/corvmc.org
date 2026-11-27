@@ -23,7 +23,8 @@
 	const displayMessage = $derived(description ?? message);
 </script>
 
-<div class="py-12 text-center {className}">
+<!-- data-empty-state is the specs' hook; no role, since status would announce every empty filter. -->
+<div class="py-12 text-center {className}" data-empty-state>
 	{#if children}
 		{@render children()}
 	{:else}

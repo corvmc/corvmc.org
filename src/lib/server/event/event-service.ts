@@ -19,6 +19,7 @@ import {
 	noSaleTerms,
 	type ListingSaleTerms
 } from './event-columns';
+import { cancelGuestsOfActs } from '#lib/server/ticket/guest-service.js';
 import { saveTicketSale, type TicketSaleTerms } from '#lib/server/ticket/ticket-sale.js';
 import { bandSaleBlocker, refundBandTicketSale } from '#lib/server/ticket/ticket-seller.js';
 import type { EventSource } from '#lib/config.js';
@@ -40,7 +41,7 @@ import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
 } from '#lib/server/volunteer/show-cancellation.js';
-import { showBlockers } from './show-readiness';
+import { listingGaps, type ListingGap } from './show-readiness';
 import { requireProgramGroup } from '#lib/server/group/group-kind.js';
 import {
 	eq,
@@ -527,6 +528,8 @@ export interface UpdateEventParams {
 		reservationEndsAt: Date;
 		overrideConflicts: boolean;
 	};
+	/** Give the room back: cancel the linked hold and keep the listing. */
+	releaseHold?: { userId: string };
 }
 
 /**
@@ -688,7 +691,9 @@ function changedFields(existing: EventRow, params: UpdateEventParams): EventEdit
  * unchanged (the edit form always posts them) are dropped, not refused.
  */
 function cancelledEditParams(existing: EventRow, params: UpdateEventParams): UpdateEventParams {
-	if (params.rebook) throw new EventStateError('A cancelled event holds no space');
+	if (params.rebook || params.releaseHold) {
+		throw new EventStateError('A cancelled event holds no space');
+	}
 	const sale = {
 		ticketingEnabled: existing.ticketingEnabled,
 		ticketPrice: existing.ticketPrice,
@@ -724,6 +729,9 @@ export async function update(
 	}
 	const params = isCancelled ? cancelledEditParams(existing, input) : input;
 	assertTimeOrder(existing, params);
+	if (params.rebook && params.releaseHold) {
+		throw new EventValidationError('Hold the room or release it, not both');
+	}
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
@@ -858,6 +866,17 @@ export async function update(
 
 			updates.reservationId = newRes.id;
 		}
+	}
+
+	if (params.releaseHold && existing.reservationId) {
+		// Cancelled, not deleted, and the listing stays up, as `updateGroupSession`
+		// gives a session's room back. Staff act on the hold, so `actor: 'staff'`.
+		await cancelReservation(existing.reservationId, params.releaseHold.userId, 'Hold released', {
+			staffOverride: true,
+			actor: 'staff',
+			actorUserId: params.releaseHold.userId
+		});
+		updates.reservationId = null;
 	}
 
 	// Handle poster replacement
@@ -1048,33 +1067,29 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 }
 
 /**
- * What a CMC listing is still missing before the public sees it. Warnings, not
- * refusals (docs/development/conventions.md#workflow-gates): `publish` goes
- * ahead over them once acknowledged with a reason.
- *
- * Community listings are exempt: a member posting somebody else's gig is not
- * making a promise on the collective's behalf.
+ * The fields a listing is still missing before the public sees it, for every
+ * source. Warnings, not refusals (docs/development/conventions.md#workflow-gates):
+ * `publish` goes ahead over them once acknowledged with a reason.
  */
-export async function publishBlockers(eventId: string): Promise<string[]> {
+export async function publishBlockers(eventId: string): Promise<ListingGap[]> {
 	return (await readiness(eventId)).warnings;
 }
 
-async function readiness(eventId: string): Promise<{ title: string | null; warnings: string[] }> {
+async function readiness(
+	eventId: string
+): Promise<{ title: string | null; warnings: ListingGap[] }> {
 	const [row] = await db
 		.select({
 			title: eventListing.title,
-			source: eventListing.source,
-			description: eventListing.description,
-			posterKey: eventPosterKeySql,
-			productionStatus: production.status
+			startsAt: eventListing.startsAt,
+			description: eventListing.description
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	if (!row) return { title: null, warnings: [] };
-	return { title: row.title, warnings: showBlockers(row) };
+	return { title: row.title, warnings: listingGaps(row) };
 }
 
 export interface PublishOptions {
@@ -1082,9 +1097,15 @@ export interface PublishOptions {
 	acknowledged?: boolean;
 	/** Required when there are warnings; written to the audit log. */
 	reason?: string | null;
+	/**
+	 * Check title, start and description. Only the staff Publish dialog sets it:
+	 * the member, band, group and committee callers have no way to acknowledge
+	 * a warning, and a refused publish would read to them as a success.
+	 */
+	checkListing?: boolean;
 }
 
-export type PublishOutcome = { published: boolean; warnings: string[] };
+export type PublishOutcome = { published: boolean; warnings: ListingGap[] };
 
 /**
  * Publish a draft or pending listing. Unacknowledged warnings come back
@@ -1092,7 +1113,9 @@ export type PublishOutcome = { published: boolean; warnings: string[] };
  * reason and is recorded as an override.
  */
 export async function publish(eventId: string, opts: PublishOptions = {}): Promise<PublishOutcome> {
-	const { title, warnings } = await readiness(eventId);
+	const found = await readiness(eventId);
+	const { title } = found;
+	const warnings = opts.checkListing ? found.warnings : [];
 	const reason = opts.reason?.trim() ?? '';
 	if (warnings.length > 0) {
 		if (!opts.acknowledged) return { published: false, warnings };
@@ -2129,7 +2152,13 @@ async function writeLineup(
 	const kept = new Set(rows.map((r) => r.priorId).filter((id): id is string => id !== null));
 	const dropped = existing.filter((r) => !kept.has(r.id)).map((r) => r.id);
 
-	if (dropped.length) await db.delete(eventBand).where(inArray(eventBand.id, dropped));
+	// Cancel the dropped acts' guests in the same batch: the delete alone would
+	// only null `ticket.event_band_id`, leaving a valid ticket for an act that is gone.
+	if (dropped.length)
+		await db.batch([
+			cancelGuestsOfActs(dropped),
+			db.delete(eventBand).where(inArray(eventBand.id, dropped))
+		]);
 
 	// At most `LINEUP_MAX` + the owner's slot, so nothing here approaches D1's
 	// 100-parameter statement cap and the updates need no chunking.

@@ -27,6 +27,7 @@
 	} from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { IconCheck } from '@tabler/icons-svelte';
 	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import TaskCatalogue from '#lib/components/task/TaskCatalogue.svelte';
@@ -71,7 +72,10 @@
 	menuLabel={m.staff_projects_id_menu_label()}
 >
 	{#if data.showId}
-		<Button variant="default" href={resolve(`staff/events/${data.showId}/production`)}>
+		<Button
+			variant="default"
+			href={withQuery(resolve(`staff/events/${data.showId}`), 'tab=production')}
+		>
 			{m.staff_production_label()}
 		</Button>
 	{/if}

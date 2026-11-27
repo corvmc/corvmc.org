@@ -59,6 +59,8 @@ export interface CreateTicketsOptions {
 	feeCoveredCents?: number;
 	/** A door sale is checked in as it is minted, by the staffer who sold it. */
 	checkedInByUserId?: string | null;
+	/** The act a guest ticket is for (#3274). Null for every other ticket. */
+	eventBandId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +117,8 @@ export async function createTickets(options: CreateTicketsOptions) {
 		actsCents = 0,
 		collectiveCents = 0,
 		feeCoveredCents = 0,
-		checkedInByUserId = null
+		checkedInByUserId = null,
+		eventBandId = null
 	} = options;
 
 	const codes = await generateUniqueCodes(quantity);
@@ -123,6 +126,7 @@ export async function createTickets(options: CreateTicketsOptions) {
 	const rows = codes.map((code, i) => ({
 		eventId,
 		purchaseId,
+		eventBandId,
 		userId: userId ?? null,
 		attendeeName,
 		attendeeEmail,

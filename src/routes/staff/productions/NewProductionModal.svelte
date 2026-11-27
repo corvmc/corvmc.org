@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
@@ -17,6 +18,9 @@
 	 * made through the Calendar's own listing form, in its production mode.
 	 */
 	let { open = $bindable(false) }: { open: boolean } = $props();
+
+	// Its own instance: the Overview's bare form may be mounted on the same page.
+	const newProduction = createProduction.for('new-production');
 
 	let creating = $state(false);
 	let eventId = $state('');
@@ -39,7 +43,7 @@
 	function handleSuccess() {
 		const id = eventId;
 		open = false;
-		if (id) goto(resolve(`staff/events/${id}/production`));
+		if (id) goto(withQuery(resolve(`staff/events/${id}`), 'tab=production'));
 	}
 </script>
 
@@ -62,13 +66,13 @@
 		</div>
 	{:else}
 		<Form
-			remote={createProduction}
+			remote={newProduction}
 			successToast={m.staff_projects_productions_new_production_modal_success_toas_toast()}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field
-				field={createProduction.fields.eventId}
+				field={newProduction.fields.eventId}
 				type="select"
 				label={m.staff_listing_label()}
 				bind:value={eventId}

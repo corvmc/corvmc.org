@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const positionsFor = vi.fn(async (_id: string) => [] as string[]);
 const committeeCapabilitiesFor = vi.fn(async (_id: string) => [] as string[]);
 const leadsOpenShow = vi.fn(async (_id: string) => false);
+const holdsLeadOnOpenShow = vi.fn(async (_id: string) => false);
 
 vi.mock('#lib/server/band/band-service.js', () => ({
 	getBySlug: vi.fn(async () => null),
@@ -25,7 +26,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
 }));
 vi.mock('#lib/server/capability/capability-grants.js', () => ({
-	leadsOpenShow: (id: string) => leadsOpenShow(id)
+	leadsOpenShow: (id: string) => leadsOpenShow(id),
+	holdsLeadOnOpenShow: (id: string) => holdsLeadOnOpenShow(id)
 }));
 vi.mock('#lib/server/inventory/item-service.js', () => ({
 	hasLoanableItems: vi.fn(async () => false)
@@ -88,6 +90,7 @@ beforeEach(() => {
 	positionsFor.mockResolvedValue([]);
 	committeeCapabilitiesFor.mockResolvedValue([]);
 	leadsOpenShow.mockResolvedValue(false);
+	holdsLeadOnOpenShow.mockResolvedValue(false);
 });
 
 describe('getStaffLayout', () => {
@@ -106,6 +109,13 @@ describe('getStaffLayout', () => {
 		const out = await layout.getStaffLayout();
 		expect(out.capabilities).toEqual([]);
 		expect(leadsOpenShow).toHaveBeenCalledWith('user-1');
+	});
+
+	it('opens the panel to an event lead holding the role grant', async () => {
+		holdsLeadOnOpenShow.mockResolvedValue(true);
+		const out = await layout.getStaffLayout();
+		expect(out.capabilities).toEqual([]);
+		expect(holdsLeadOnOpenShow).toHaveBeenCalledWith('user-1');
 	});
 
 	it("adds the seat's capabilities to a position's without duplicating them", async () => {

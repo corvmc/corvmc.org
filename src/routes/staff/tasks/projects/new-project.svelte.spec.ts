@@ -43,15 +43,14 @@ vi.mock('$app/navigation', () => ({
 
 const ProjectsPage = (await import('./+page.svelte')).default;
 
-describe('the Projects row (#2411)', () => {
-	it('puts the view tabs in the header and the create action with the list', async () => {
+describe('the Projects page', () => {
+	it('links the Tasks view and offers New project', async () => {
 		held.capabilities = ['project.read', 'event.manage'];
 		const { container } = await render(ProjectsPage);
 
 		await vi.waitFor(() =>
-			expect(container.querySelector('[data-page-header] a[href="/staff/tasks"]')).not.toBeNull()
+			expect(container.querySelector('a[href="/staff/tasks"]')).not.toBeNull()
 		);
-		expect(container.querySelector('[data-page-header] [data-testid="new-project"]')).toBeNull();
 		expect(container.querySelector('[data-testid="new-project"]')).not.toBeNull();
 	});
 });

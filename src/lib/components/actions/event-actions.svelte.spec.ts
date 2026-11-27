@@ -14,7 +14,7 @@ const impact = {
 	hasReservation: false
 };
 
-let blockers: string[] = [];
+let blockers: ('title' | 'startsAt' | 'description')[] = [];
 
 /** Each action's trigger is its render container's only button; dialogs portal out. */
 let screen: Locator;
@@ -172,7 +172,7 @@ describe('DeleteEventAction', () => {
  * instead of asking for a confirmation it would then refuse.
  */
 describe('PublishEventAction', () => {
-	const open = async (missing: string[]) => {
+	const open = async (missing: typeof blockers) => {
 		blockers = missing;
 		await mount(PublishEventAction, { eventId: 'event-3' });
 		await trigger().click();
@@ -192,17 +192,31 @@ describe('PublishEventAction', () => {
 		expect(reason().query()).toBeNull();
 	});
 
-	// Every warning, not the first one: a staffer who fixes the poster and comes
-	// back to find the venue still missing has been sent round twice. Warnings do
-	// not refuse (#1787): a reason lets the publish through.
-	it('lists what is missing and offers to publish anyway with a reason', async () => {
-		const missing = ['No poster', 'No venue'];
-		const dialog = await open(missing);
+	// Every warning, not the first one: a staffer who fixes the title and comes
+	// back to find the description still missing has been sent round twice.
+	// Warnings do not refuse (#1787): a reason lets the publish through.
+	it('lists each gap as a link to its Listing tab field, with a reason to publish anyway', async () => {
+		const dialog = await open(['title', 'description']);
 		await expect.element(dialog).toBeVisible();
 
 		await expect.element(dialog.getByRole('alert')).toBeVisible();
-		for (const blocker of missing) await expect.element(dialog.getByText(blocker)).toBeVisible();
+		const gaps = dialog.getByRole('alert').getByRole('listitem').getByRole('link');
+		await expect
+			.element(gaps.first())
+			.toHaveAttribute('href', '/staff/events/event-3#listing-title');
+		await expect
+			.element(gaps.last())
+			.toHaveAttribute('href', '/staff/events/event-3#listing-description');
 		await expect.element(reason()).toBeVisible();
+		await expect.element(submit()).toBeEnabled();
+	});
+
+	it('points Fill them in at the first gap, beside Publish anyway', async () => {
+		const dialog = await open(['startsAt', 'description']);
+		await expect.element(dialog).toBeVisible();
+
+		const fill = dialog.getByRole('link').last();
+		await expect.element(fill).toHaveAttribute('href', '/staff/events/event-3#listing-date');
 		await expect.element(submit()).toBeEnabled();
 	});
 });

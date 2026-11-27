@@ -70,6 +70,8 @@ export const tableOrder = [
 	'donation',
 	// Cascades from production, so it clears with it.
 	'production_expense',
+	// Cascades from production; counted_by_user_id is set null.
+	'production_till_count',
 	// References event_listing and directory_entry, so it clears before both.
 	'artifact_request',
 	// References sponsorship and event_listing, so it follows both.
@@ -174,11 +176,12 @@ export const tableOrder = [
 	'payment_cache',
 	// References event_listing and group.
 	'ticket_sale',
+	// The bill: references event and band, so it wipes before either. It sits
+	// above `ticket` because a guest ticket points at the act it was issued for.
+	'event_band',
 	'ticket',
 	'event_rsvp',
 	'event_attendance',
-	// The bill: references event and band, so it wipes before either.
-	'event_band',
 	// The run of show: references production and event_band, so it lands after
 	// both. Note it sits well below `production` — its other parent is the bill.
 	'production_slot',

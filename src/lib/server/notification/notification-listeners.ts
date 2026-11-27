@@ -1430,14 +1430,14 @@ export function registerAllNotificationListeners(): void {
 				userEmail: event.leadEmail,
 				title: `Event lead: ${event.eventTitle}`,
 				body: line,
-				href: `/staff/events/${event.eventId}/production`,
+				href: `/staff/events/${event.eventId}?tab=production`,
 				email: {
 					recipientName: event.leadName,
 					subject: `Event lead: ${event.eventTitle}`,
 					heading: 'Event lead',
 					paragraphs: [
 						{ text: line },
-						{ text: 'The production console has the lineup, terms, crew and room for the show.' }
+						{ text: 'The Production tab has the lineup, terms, crew and room for the show.' }
 					],
 					details: [
 						{ label: 'Event', value: event.eventTitle },
@@ -1496,7 +1496,7 @@ export function registerAllNotificationListeners(): void {
 			body: single ? `${first.groupName} · ${line}` : line,
 			href: items.every((i) => i.forLead)
 				? oneShow && first.eventId
-					? `/staff/events/${first.eventId}/production`
+					? `/staff/events/${first.eventId}?tab=production`
 					: '/staff'
 				: oneCommittee
 					? `/member/groups/${first.groupSlug}?tab=items`

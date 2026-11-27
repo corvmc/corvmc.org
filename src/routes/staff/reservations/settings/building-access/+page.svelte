@@ -49,12 +49,7 @@
 	<LockCodes />
 	<KeyRegister />
 	{#if canReadSettings}
-		<section
-			id="lock-settings"
-			class="space-y-2"
-			aria-labelledby="lock-settings-title"
-			data-testid="lock-settings"
-		>
+		<section id="lock-settings" class="space-y-2" aria-labelledby="lock-settings-title">
 			<h2 id="lock-settings-title" class="font-semibold">
 				{m.staff_reservations_lock_settings_title()}
 			</h2>

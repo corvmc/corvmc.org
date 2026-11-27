@@ -18,10 +18,11 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { workOrder, workTask } from '#lib/server/db/schema/volunteer.js';
-import { doorCheck } from '#lib/production/door-check.js';
+import { tillSummary } from './till-summary';
 import { DomainError } from '#lib/server/domain-error.js';
 import type { Production, ProductionStatus } from '#lib/server/db/schema/production.js';
 import { recomputeSetTimes } from './run-of-show-service';
+import { ensureLeadTask } from './show-lead-service';
 import {
 	createShowProject,
 	deleteShowProject,
@@ -122,11 +123,11 @@ export interface ProductionDetailsInput {
 	loadOutBy?: Date | null;
 	/** How many acts the bill should end up with. Null clears the target. */
 	actsWanted?: number | null;
-	billingNotes?: string | null;
-	hospitalityNotes?: string | null;
+	/** The gap between sets; moving it moves every set after the first. */
+	changeoverMinutes?: number;
 	internalNotes?: string | null;
-	// The door take is not here: `door-count-service.ts` writes it, so the
-	// counter is stamped with the figure (#2722).
+	// The door take is not here: `till-count-service.ts` writes it, so each
+	// count is stamped with who made it (#3273).
 }
 
 // ---------------------------------------------------------------------------
@@ -267,6 +268,13 @@ export async function createProduction(
 
 	const [row] = await db.select().from(production).where(eq(production.id, productionId));
 	await stampProductionTemplate(projectId, eventId, opts?.createdByUserId ?? null);
+	// The lead's task is there to assign from the start. A missing role or a
+	// failed insert is no reason to refuse the show: the Crew box opens it later.
+	try {
+		await ensureLeadTask(eventId);
+	} catch (err) {
+		captureException(err, { event: 'production.ensure_lead_task', eventId });
+	}
 	return row;
 }
 
@@ -282,7 +290,7 @@ const SHOW_CLOCK = [
 ] as const satisfies readonly (readonly [keyof ProductionDetailsInput, DutyListAnchor, unknown])[];
 
 /**
- * The times, the producer and the three notes. **Not** status — status only
+ * The times, the producer, the changeover and the notes. **Not** status — status only
  * moves through `transitionProduction` and `reopenProduction`.
  */
 export async function updateProductionDetails(
@@ -330,9 +338,40 @@ export async function updateProductionDetails(
 	// before the write is a race, and the recompute is idempotent and costs one
 	// select when nothing moved. `setShowLead` posts only
 	// `producerUserId`, so the common non-timing edit skips this entirely.
-	if ('firstSetAt' in data) await recomputeSetTimes(row.id);
+	if ('firstSetAt' in data || 'changeoverMinutes' in data) await recomputeSetTimes(row.id);
 
 	return row;
+}
+
+/** When each fixed row of the run of show was done. Null clears a mistap. */
+export interface ShowDoneInput {
+	loadInDoneAt?: Date | null;
+	soundcheckDoneAt?: Date | null;
+	doorsDoneAt?: Date | null;
+	curfewDoneAt?: Date | null;
+	loadOutDoneAt?: Date | null;
+}
+
+/** Done on a fixed row of the run of show (#3272). Never moves the schedule. */
+export async function markShowTiming(id: string, patch: ShowDoneInput): Promise<void> {
+	await assertNotTerminal({ productionId: id });
+	const [row] = await db
+		.update(production)
+		.set({ ...patch, updatedAt: new Date() })
+		.where(eq(production.id, id))
+		.returning({ id: production.id });
+	if (!row) throw new ProductionNotFoundError();
+}
+
+/** When the listing announcing a production starts: the date its times are on. */
+export async function showStartsAt(productionId: string): Promise<Date | null> {
+	const [row] = await db
+		.select({ startsAt: eventListing.startsAt })
+		.from(production)
+		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
+		.where(eq(production.id, productionId))
+		.limit(1);
+	return row?.startsAt ?? null;
 }
 
 /**
@@ -401,8 +440,12 @@ export async function transitionProduction(
 	const from = current.status;
 
 	const outstandingCloseOut = to === 'closed' ? await outstandingCloseOutTasks(id) : [];
-	const door = doorCheck(current.doorCashCents ?? null, current.doorRecountCents ?? null);
-	const warnings = transitionWarnings(from, to, { outstandingCloseOut, door });
+	const till = to === 'settled' || to === 'closed' ? await tillSummary(id) : null;
+	const warnings = transitionWarnings(from, to, {
+		outstandingCloseOut,
+		door: till?.check,
+		oneCounter: till?.oneCounter
+	});
 	const reason = opts.reason?.trim() ?? '';
 	if (warnings.length > 0) {
 		if (!opts.acknowledged) return { moved: false, warnings };
@@ -488,9 +531,7 @@ async function readForMove(id: string) {
 		.select({
 			status: production.status,
 			eventId: eventListing.id,
-			title: eventListing.title,
-			doorCashCents: production.doorCashCents,
-			doorRecountCents: production.doorCashRecountCents
+			title: eventListing.title
 		})
 		.from(production)
 		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))

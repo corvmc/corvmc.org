@@ -79,11 +79,12 @@ PRs (an open one means pick something else), then open the **draft PR before wri
 branch named for the issue, `Fixes #<n>` in the body.
 
 **The order of work is the [CorvMC Priorities](https://github.com/orgs/corvmc/projects/1) project**
-(org project 1). Its `Rank` field is the owner's order, 1 first; `Tier` groups the ranks;
+(org project 1). Its `Rank` field is the order of work, 1 first; `Tier` groups the ranks;
 `Status` runs Todo → Up next → In progress → In review → Done. To pick work unprompted, take the
 lowest-ranked Up next or Todo item with no open PR. Add an issue you file with
-`gh project item-add 1 --owner corvmc --url <issue-url>` and leave its `Rank` empty for the owner
-to place; move an item to In progress or In review as its PR opens. `gh` needs the `project`
+`gh project item-add 1 --owner corvmc --url <issue-url>`, then set its `Rank` and `Tier` where
+it belongs among its neighbours; re-rank existing items when what you learn changes their order.
+Move an item to In progress or In review as its PR opens. `gh` needs the `project`
 scope (`gh auth refresh -s project`).
 
 **Finish in the same turn:** commit, push, open the PR, run `node scripts/claude/pre-arm-check.mjs <n>`

@@ -55,7 +55,7 @@
 		`${String(month).padStart(2, '0')}/${String(year).slice(-2)}`;
 </script>
 
-<Card testid="payment-methods">
+<Card>
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
@@ -136,7 +136,13 @@
 		{/if}
 
 		<div class="mt-4">
-			<Button variant="default" size="sm" outline onclick={() => (addOpen = true)}>
+			<Button
+				variant="default"
+				size="sm"
+				outline
+				data-testid="add-card"
+				onclick={() => (addOpen = true)}
+			>
 				{cards.length === 0
 					? m.member_membership_payment_methods_card_add_card_label()
 					: m.member_membership_payment_methods_card_add_another_card_label()}

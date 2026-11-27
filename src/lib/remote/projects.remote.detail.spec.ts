@@ -16,9 +16,10 @@ vi.mock('$app/server', () => ({
 		Object.assign(async (raw: unknown) => handler(schema.parse(raw)), { __: { type: 'query' } }),
 	form: () => Object.assign(async () => undefined, { __: { type: 'form' } })
 }));
+const can = vi.hoisted(() => vi.fn(async (_cap: string, _scope?: unknown) => true));
 vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'user-1' }),
-	can: async () => true,
+	can: (cap: string, scope?: unknown) => can(cap, scope),
 	requireCapability: async () => ({ id: 'user-1' })
 }));
 
@@ -63,5 +64,31 @@ describe('the project detail', () => {
 
 		expect(detail.progress).toEqual({ done: 2, total: 3 });
 		expect(JSON.stringify(detail)).not.toMatch(/task-/);
+	});
+
+	it('carries the cost sheet only for a production, and who may edit it', async () => {
+		insert('project', { id: 'plain', name: 'Renovation 2' });
+		insert('project', { id: 'show', name: 'Show', kind: 'production' });
+		insert('production', { id: 'prod-1', project_id: 'show', status: 'draft' });
+		insert('production_expense', {
+			id: 'exp-1',
+			production_id: 'prod-1',
+			label: 'PA',
+			category: 'sound',
+			amount_cents: 500
+		});
+
+		expect((await load('plain')).costs).toBeNull();
+
+		const asRunner = await load('show');
+		expect(asRunner.canEditCosts).toBe(true);
+		expect(asRunner.costs).toMatchObject({
+			productionId: 'prod-1',
+			lines: [expect.objectContaining({ id: 'exp-1' })]
+		});
+
+		can.mockImplementation(async (cap) => cap !== 'production.run');
+		expect((await load('show')).canEditCosts).toBe(false);
+		expect(can).toHaveBeenCalledWith('production.run', { projectId: 'show' });
 	});
 });

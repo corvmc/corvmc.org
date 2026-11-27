@@ -14,6 +14,7 @@ import {
 	RIDER_ITEM_NOTES_MAX,
 	RIDER_MAX_ELEMENTS,
 	RIDER_MAX_INPUTS_PER_ELEMENT,
+	RIDER_MAX_OUTLETS,
 	RIDER_MIC_PREF_MAX,
 	RIDER_NOTES_MAX,
 	type RiderElementKind,
@@ -65,6 +66,8 @@ export interface RiderInputView {
 	channel: number;
 	label: string;
 	source: RiderInputSource;
+	/** Who brings the mic or DI: the input list's "Bringing it". */
+	providedBy: RiderProvidedBy;
 	micPref: string | null;
 	phantom: boolean;
 	stand: RiderStandType;
@@ -82,6 +85,7 @@ export interface RiderElementView {
 	kind: RiderElementKind;
 	label: string;
 	providedBy: RiderProvidedBy;
+	outlets: number;
 	notes: string | null;
 	sortOrder: number;
 	inputs: RiderInputView[];
@@ -105,9 +109,15 @@ export interface RiderView {
 	venueProvidedCount: number;
 }
 
+/**
+ * What a save carries. `outlets` and an input's `providedBy` left out keep the
+ * stored value, matched by label as placements are, so a caller that does not
+ * know a field cannot reset it.
+ */
 export interface RiderInputDraft {
 	label: string;
 	source: RiderInputSource;
+	providedBy?: RiderProvidedBy;
 	micPref?: string | null;
 	phantom?: boolean;
 	stand?: RiderStandType;
@@ -119,6 +129,7 @@ export interface RiderElementDraft {
 	kind: RiderElementKind;
 	label: string;
 	providedBy?: RiderProvidedBy;
+	outlets?: number;
 	notes?: string | null;
 	inputs?: RiderInputDraft[];
 }
@@ -240,6 +251,7 @@ export async function getRider(groupId: string): Promise<RiderView> {
 			kind: riderElement.kind,
 			label: riderElement.label,
 			providedBy: riderElement.providedBy,
+			outlets: riderElement.outlets,
 			notes: riderElement.notes,
 			sortOrder: riderElement.sortOrder,
 			x: riderElement.x,
@@ -275,6 +287,7 @@ export async function getRider(groupId: string): Promise<RiderView> {
 			channel: 0,
 			label: row.label,
 			source: row.source,
+			providedBy: row.providedBy,
 			micPref: row.micPref,
 			phantom: row.phantom,
 			stand: row.stand,
@@ -333,10 +346,36 @@ async function replaceElementsForOwner(
 			label: riderElement.label,
 			x: riderElement.x,
 			y: riderElement.y,
-			inventoryItemId: riderElement.inventoryItemId
+			inventoryItemId: riderElement.inventoryItemId,
+			outlets: riderElement.outlets
 		})
 		.from(riderElement)
 		.where(ownerFilter);
+
+	// Fields a draft may leave out (see `RiderInputDraft`) come back the same way.
+	const outletsByLabel = new Map(doomed.map((d) => [d.label, d.outlets] as const));
+	const doomedLabel = new Map(doomed.map((d) => [d.id, d.label] as const));
+	const doomedInputs = doomed.length
+		? await db
+				.select({
+					elementId: riderInput.elementId,
+					label: riderInput.label,
+					providedBy: riderInput.providedBy
+				})
+				.from(riderInput)
+				.where(
+					inArray(
+						riderInput.elementId,
+						doomed.map((d) => d.id)
+					)
+				)
+		: [];
+	const inputKey = (elementLabel: string, inputLabel: string) => `${elementLabel}\n${inputLabel}`;
+	const inputProvidedBy = new Map(
+		doomedInputs.map(
+			(i) => [inputKey(doomedLabel.get(i.elementId) ?? '', i.label), i.providedBy] as const
+		)
+	);
 
 	const placedByLabel = new Map(
 		doomed
@@ -369,6 +408,7 @@ async function replaceElementsForOwner(
 			kind: el.kind,
 			label,
 			providedBy: el.providedBy ?? ('band' as const),
+			outlets: clampOutlets(el.outlets ?? outletsByLabel.get(label) ?? 0),
 			notes: trim(el.notes, RIDER_ITEM_NOTES_MAX),
 			sortOrder: i,
 			x: placed?.x ?? null,
@@ -378,21 +418,28 @@ async function replaceElementsForOwner(
 	});
 
 	const inputRows = elements.flatMap((el, i) =>
-		(el.inputs ?? []).map((input, j) => ({
-			elementId: elementRows[i].id,
-			label: trim(input.label, RIDER_INPUT_LABEL_MAX) ?? 'Untitled',
-			source: input.source,
-			micPref: trim(input.micPref, RIDER_MIC_PREF_MAX),
-			phantom: input.phantom ?? false,
-			stand: input.stand ?? ('none' as const),
-			monitorMixUserId: input.monitorMixUserId ?? null,
-			notes: trim(input.notes, RIDER_ITEM_NOTES_MAX),
-			sortOrder: j
-		}))
+		(el.inputs ?? []).map((input, j) => {
+			const label = trim(input.label, RIDER_INPUT_LABEL_MAX) ?? 'Untitled';
+			return {
+				elementId: elementRows[i].id,
+				label,
+				source: input.source,
+				providedBy:
+					input.providedBy ??
+					inputProvidedBy.get(inputKey(elementRows[i].label, label)) ??
+					('venue' as const),
+				micPref: trim(input.micPref, RIDER_MIC_PREF_MAX),
+				phantom: input.phantom ?? false,
+				stand: input.stand ?? ('none' as const),
+				monitorMixUserId: input.monitorMixUserId ?? null,
+				notes: trim(input.notes, RIDER_ITEM_NOTES_MAX),
+				sortOrder: j
+			};
+		})
 	);
 
-	// Ten columns an element, ten an input — eight rows a statement keeps both
-	// under D1's 100-parameter ceiling with room to spare.
+	// Twelve columns an element, eleven an input — eight rows a statement keeps
+	// both under D1's 100-parameter ceiling.
 	for (let i = 0; i < elementRows.length; i += 8) {
 		await db.insert(riderElement).values(elementRows.slice(i, i + 8));
 	}
@@ -475,6 +522,7 @@ export async function appendOwnElements(
 			kind: riderElement.kind,
 			label: riderElement.label,
 			providedBy: riderElement.providedBy,
+			outlets: riderElement.outlets,
 			notes: riderElement.notes,
 			sortOrder: riderElement.sortOrder
 		})
@@ -505,6 +553,7 @@ export async function appendOwnElements(
 		list.push({
 			label: row.label,
 			source: row.source,
+			providedBy: row.providedBy,
 			micPref: row.micPref,
 			phantom: row.phantom,
 			stand: row.stand,
@@ -519,6 +568,7 @@ export async function appendOwnElements(
 			kind: e.kind,
 			label: e.label,
 			providedBy: e.providedBy,
+			outlets: e.outlets,
 			notes: e.notes,
 			inputs: inputsByElement.get(e.id) ?? []
 		})),
@@ -691,6 +741,12 @@ export async function getEventRiderSummaries(eventId: string): Promise<EventRide
 			empty: channelCount === 0 && uploadCount === 0
 		};
 	});
+}
+
+/** Outlets on one element: a whole number from 0 to `RIDER_MAX_OUTLETS`. */
+export function clampOutlets(n: number): number {
+	if (!Number.isFinite(n)) return 0;
+	return Math.min(RIDER_MAX_OUTLETS, Math.max(0, Math.round(n)));
 }
 
 /** Percent of the stage. A client can post anything; this is where the bound lives. */

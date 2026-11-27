@@ -51,6 +51,7 @@ export const auditActions = [
 	'production.payout_recorded',
 	'production.payout_undone',
 	'production.door_recounted',
+	'production.till_count_removed',
 	'event.published_over_warnings',
 	'event.emailed_beyond_visibility',
 	'event.edited_while_cancelled',
@@ -276,6 +277,8 @@ export interface AuditDetailsByAction {
 	'production.payout_undone': ProductionPayout;
 	/** A second person counted the drawer (#2722). The two differ when the count is off. */
 	'production.door_recounted': { firstCents: number; secondCents: number };
+	/** A handoff count taken back (#3273). A count is a cash record, so its removal is kept. */
+	'production.till_count_removed': { cashCents: number; counterName: string | null };
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
 	/** A campaign about a non-public event, sent or scheduled to audiences that reach past it. */

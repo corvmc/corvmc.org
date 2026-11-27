@@ -170,7 +170,7 @@ describe('entityHref', () => {
 		it.each([
 			['work_request', '/staff/inventory/problems/work_request-1'],
 			['group_application', '/staff/clubs/club-1'],
-			['market_vendor', '/staff/events/event-1/vendors'],
+			['market_vendor', '/staff/events/event-1?tab=vendors'],
 			['volunteer', '/staff/members?role=volunteer&status=blocked'],
 			['local_resource', '/staff/local-resources?status=pending']
 		] as const)('links a %s to where it is decided', (type, href) => {

@@ -192,7 +192,7 @@
 	</td>
 </tr>
 {#if open && w.shiftId && !signup}
-	<tr data-testid="roster-match">
+	<tr>
 		<td colspan="4">
 			<CandidateColumn workOrderId={w.id} shiftId={w.shiftId} startsAt={w.startsAt} />
 		</td>

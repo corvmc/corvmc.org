@@ -554,6 +554,41 @@ What is **not** copy, and stays:
 `e2e/create-band-modal.e2e.ts` are the model e2e specs; `src/lib/server/errors.spec.ts` and
 `src/lib/enum-labels.spec.ts` are the model unit specs.
 
+#### Do not assert on layout
+
+A test must survive any layout change that keeps the behaviour. Moving a card into a sidebar,
+renaming a tab or reordering sections is a design edit; it should not also be a test edit. Name the
+class of behaviour the test guards, such as "a show's unscheduled task is reachable from that
+show", and assert that.
+
+Where something sits on a page is not behaviour. A test must not:
+
+- scope an assertion to a card, panel, tab or section that exists only for layout, whether by
+  `data-testid`, a heading, a CSS class or a DOM path;
+- assert order, adjacency or position ("beside the shifts", "first row", "above the form") unless
+  the order is the feature, such as a sorted list or a queue;
+- click through a tab or disclosure only to reach the thing under test, when the thing has an
+  address (`?tab=`, a route) or an entity `href` to reach it.
+
+Assert instead:
+
+- **reachability**: a link to the entity (`a[href="/staff/tasks/<id>"]`) is visible on the page,
+  scoped to `main`, not to the container that holds it;
+- **presence or absence** for a role or state: the control is offered, or it is not;
+- **a result**: URL, field value, count, a DB row, a toast.
+
+What stays: a dialog, a form or a table row scoped by entity identity (rule 4 above) is the
+control the user works in, not layout. A test of a layout component (`PageHeader`, `Table`,
+`ListDetailShell`) may assert its own structure; that structure is what it exists for. A
+deliberate placement test, such as "the destructive action is not in the row menu", says so in a
+comment.
+
+A `data-testid` is a last-resort handle on one control. A testid on a container invites the
+coupling above, so name the control, not the box around it.
+
+Not an e2e test of the discard prompt, because `Action.svelte.spec.ts` owns it for every form
+(#3346).
+
 #### One full suite per machine
 
 `pnpm test:unit -- --run` takes a machine-wide lock (`scripts/lib/unit-lock.ts`) and **waits**
@@ -635,6 +670,7 @@ spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 | Service functions left with no caller after their pages moved (#2903)             | a service export only its spec calls         | invariant spec (allowlist)   |
 | A reservation's status and payment state read differently per surface (#2861)     | two definitions of one derived state         | real SQLite + invariant spec |
 | Two overlapping get-or-creates inserted twice, or the second threw (#2621, #2681) | select-then-insert without conflict handling | lint rule                    |
+| A card became a sidebar and a spec asserting the task inside it failed (#3332)    | a test scoped to a layout container          | rule, reviewed (#3332)       |
 
 ## Forms: no raw elements
 
@@ -1121,9 +1157,12 @@ inventory assets (`reopenAsset`, both behind `inventory.reopen`) have the same R
 quiet `ReopenAction`. None reverses money: a reopened job keeps its ledger rows and a re-completion
 books only the difference; a reopened asset's ledger is brought back with an `adjust` movement.
 
-Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
-returns its readiness warnings unpublished until acknowledged with a reason, and writes
-`event.published_over_warnings` when it goes ahead over them.
+Publishing an event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
+returns its missing fields (`title`, `startsAt`, `description`, every source) when the staff dialog
+asks for them (`checkListing`), unpublished until
+acknowledged with a reason, and writes `event.published_over_warnings` when it goes ahead over
+them. Not poster or production status at publish, because the owner set the three missing fields
+(#3271).
 
 So do approving a returned volunteer hour log (`approveHourLog`, which writes
 `volunteer_hours.approved_over_return`) and checking out a requested equipment loan without

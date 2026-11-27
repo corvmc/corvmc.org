@@ -237,6 +237,7 @@ export const relations = defineRelations(schema, (t) => ({
 	},
 	ticket: {
 		event: t.one.eventListing({ from: t.ticket.eventId, to: t.eventListing.id }),
+		eventBand: t.one.eventBand({ from: t.ticket.eventBandId, to: t.eventBand.id }),
 		user: t.one.user({ from: t.ticket.userId, to: t.user.id }),
 		checkedInBy: t.one.user({ from: t.ticket.checkedInByUserId, to: t.user.id })
 	},

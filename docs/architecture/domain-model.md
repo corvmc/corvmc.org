@@ -82,6 +82,8 @@ production. Doors is the one time the public needs; load-in, soundcheck, first s
 and load-out are internal. Ticketing is neither announcement nor back-of-house, so it is
 its own row, `ticket_sale`, keyed to the listing: a band gig will sell tickets without a
 production (#1203). A null `group_id` means the collective is the seller.
+A guest of an act is an ordinary free `ticket` with `event_band_id` set to that act's credit,
+not a separate guest table, so it is counted, emailed and checked in like any other (#3274).
 
 A listing announces a production by sitting on that production's project
 (`event_listing.project_id` = `production.project_id`); there is no second edge (#2076).
@@ -251,6 +253,9 @@ a live task in it (#2959). On a show that reach covers
 `production.run`, the show's own work. What binds CMC to someone outside it (the deal, the
 lineup, cancelling) is `production.book`, which is org-wide. `explainAccess` lists each
 committee's projects and how it is on them.
+
+A volunteer role reaches it too: an assignee on a show's Event lead task holds `production.run` on that
+show's project (`roleGrantAllowsOnProject`), from assignment until `graceDays` after the show (#3274).
 
 - Not responsibility stored as permission, such as `volunteer.manageShifts` granted to every
   committee, because that reaches every task the committee touches, not the ones it owns

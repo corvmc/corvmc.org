@@ -61,6 +61,7 @@ import { seedCmcEventLineups } from './seed/lineups';
 import { seedProductions } from './seed/productions';
 import { seedArtifactRequests } from './seed/artifact-requests';
 import { seedRunOfShow } from './seed/run-of-show';
+import { seedActGuests } from './seed/guests';
 import { seedBandReservations } from './seed/band-reservations';
 import { seedBandSites, seedBandPageConfigs, seedFreePressKits } from './seed/band-sites';
 import { seedRecurringSeries } from './seed/recurring';
@@ -90,6 +91,7 @@ import { seedFundedProjects, seedFundingWork } from './seed/funding';
 import { seedOrientation } from './seed/orientation';
 import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
+	seedEventLeadTasks,
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
 	seedVolunteerInterests,
@@ -204,6 +206,8 @@ async function main() {
 	// After the productions, because a slot hangs off one — and it reads the bill
 	// back rather than being handed it, the way the rider seeder reads a roster.
 	const runOfShow = await seedRunOfShow(productions.rows);
+	// After the bill: a guest is a ticket tied to one of its credits (#3274).
+	const actGuests = await seedActGuests(productions.rows);
 	// After the bill, because an ask is against a listing on it.
 	const artifactRequests = await seedArtifactRequests(productions.rows);
 	const bandReservations = await seedBandReservations(bands, usage ? [usage.band] : []);
@@ -282,6 +286,7 @@ async function main() {
 		deskCert: certifications.deskCert
 	});
 	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
+	await seedEventLeadTasks(volunteerRoles, productions.rows, activeVolunteers);
 	const equipmentReports = await seedEquipmentReports(
 		users.slice(1, 4),
 		adminUser.id,
@@ -499,6 +504,9 @@ async function main() {
 	);
 	console.log(
 		`  ${runOfShow.slots} run-of-show sets — ${runOfShow.uncredited} on no poster, ${runOfShow.withoutTimes} with no downbeat yet`
+	);
+	console.log(
+		`  ${actGuests.guests} act guests on one show — one checked in, one cancelled, one legacy comp with no act`
 	);
 	console.log(
 		`  ${artifactRequests.requests} artifact requests, half overdue, two of them poster art from Maren Holt`

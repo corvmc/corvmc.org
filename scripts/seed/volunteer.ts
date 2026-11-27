@@ -20,6 +20,7 @@ import { insertTasksWithShifts } from './shifts';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
+import { EVENT_LEAD_VOLUNTEER_ROLE } from '../../src/lib/config';
 
 // `defaultDurationMinutes` / `defaultCapacity` are what the New Shift form starts
 // with, so they are only set on the roles that really are scheduled as shifts —
@@ -128,6 +129,17 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 			'Get a published show in front of people: the poster around town, social, press and the newsletter.',
 		displayOrder: 56,
 		defaultCapacity: 1
+	},
+	{
+		// A show's event lead (#3274): a task with no shift, assigned from the event
+		// page's Crew box. Holds the show's production work and its guest lists from
+		// assignment on, with no lead time (see `EVENT_LEAD_VOLUNTEER_ROLE`).
+		name: EVENT_LEAD_VOLUNTEER_ROLE,
+		group: 'away-from-shows' as const,
+		description:
+			"Work with the acts before the show: answer their questions, keep their guest lists and run the advance.\n\nOne person per show, named by staff. There is no shift; the role carries the show's production tools from the day you are named.",
+		displayOrder: 54,
+		capabilityGrants: ['production.run', 'event.manageGuests']
 	},
 	{
 		name: 'Production Lead',
@@ -884,4 +896,37 @@ async function totals() {
 		db.select({ n: count() }).from(volunteerHourLog).where(isNotNull(volunteerHourLog.workOrderId))
 	]);
 	return { shifts: shifts.n, assignees: assignees.n, taskHours: taskHours.n };
+}
+
+/**
+ * An Event lead task on each seeded show (#3274), as opening a production makes
+ * one. Most have a lead; one is open to assign, and the cancelled show's task
+ * is called off with its lead still on it, so neither holds anything.
+ */
+export async function seedEventLeadTasks(
+	roles: Array<{ id: string; name: string }>,
+	shows: Array<{ eventId: string; status: string }>,
+	people: Array<{ id: string }>
+) {
+	console.log('Seeding event lead tasks...');
+	const role = roles.find((r) => r.name === EVENT_LEAD_VOLUNTEER_ROLE);
+	if (!role || shows.length === 0) return { tasks: 0, assigned: 0 };
+
+	const calledOff = new Date();
+	const tasks = await batchInsert(
+		workOrder,
+		shows.map((s) => ({
+			volunteerRoleId: role.id,
+			eventId: s.eventId,
+			title: EVENT_LEAD_VOLUNTEER_ROLE,
+			cancelledAt: s.status === 'cancelled' ? calledOff : null
+		}))
+	);
+	const assignees = tasks.flatMap((t, i) =>
+		shows[i].status === 'offered' || people.length === 0
+			? []
+			: [{ workOrderId: t.id, userId: people[i % people.length].id }]
+	);
+	await batchInsert(workOrderAssignee, assignees);
+	return { tasks: tasks.length, assigned: assignees.length };
 }

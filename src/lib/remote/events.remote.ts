@@ -7,8 +7,7 @@ import { productionStatuses } from '#lib/server/db/schema/production.js';
 import { historyArgs } from './_history';
 import { listEventHistory } from '#lib/server/event/event-history.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
-import { error, invalid, isHttpError } from '@sveltejs/kit';
-import { listActContacts } from '#lib/server/directory/contact-service.js';
+import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
@@ -41,6 +40,9 @@ import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
 import { getSettlement } from '#lib/server/production/settlement-service.js';
 import { getHostShift } from '#lib/server/production/host-service.js';
+import { ensureLeadTask, getShowLead } from '#lib/server/production/show-lead-service.js';
+import { eventCrew } from '#lib/server/task/event-crew.js';
+import { relatedTasks } from '#lib/server/task/related-tasks.js';
 import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
 import {
 	listRequests as listArtifactRequests,
@@ -80,6 +82,7 @@ import {
 	type MemberShowRow,
 	countMemberPastShows
 } from '#lib/server/event/event-service.js';
+import { LISTING_GAP_WORDS } from '#lib/server/event/show-readiness.js';
 import {
 	getConflictDetails,
 	getValidationWarnings
@@ -151,12 +154,24 @@ import { group } from '#lib/server/db/schema/group.js';
 import { eventSources, listDateRanges } from '#lib/config.js';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '#lib/utils/event-time.js';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
+import {
+	DEFAULT_TIMEZONE,
+	EVENT_LEAD_VOLUNTEER_ROLE,
+	SEARCH_LIMIT,
+	SHORT_TEXT_MAX
+} from '#lib/config.js';
 import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
 import { getMemberGigGuide, getPublicGigGuide } from './calendar.remote';
-import { writesAudit } from '#lib/server/audit/declared.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
+import {
+	addGuest,
+	eventOfAct,
+	eventOfGuest,
+	listGuestsByAct,
+	removeGuest
+} from '#lib/server/ticket/guest-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -351,39 +366,54 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		throw error(404, 'Event not found');
 	}
 
-	let bandInfo: { name: string; slug: string } | null = null;
-	if (evt.groupId) {
-		const [row] = await db
-			.select({ name: group.name, slug: group.slug })
-			.from(group)
-			.where(eq(group.id, evt.groupId))
-			.limit(1);
-		bandInfo = row ?? null;
-	}
-
-	const lineup = await getEventLineup(id);
-	// Only a show CMC produces can have a running order, and nine listings in ten
-	// are not one — so the branch keeps a round trip off most detail views. The
-	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
-	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
-	const seller = await sellerFor(evt);
-	const access = await getVenueAccess(evt.venueId);
-	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
+	// Every read below needs only `evt`, so they start together; the recap
+	// uploader alone waits, for the photo count. Only a show CMC produces can
+	// have a running order, and nine listings in ten are not one, so the branch
+	// keeps a round trip off most views. The rest of the gate (a confirmed
+	// production, a downbeat, a credit) is in SQL.
+	const [
+		bandInfo,
+		lineup,
+		setTimes,
+		seller,
+		access,
+		remaining,
+		rsvpCount,
+		isSustainingMember,
+		photos,
+		sponsors,
+		recapAccess,
+		upcomingRows
+	] = await Promise.all([
+		evt.groupId
+			? db
+					.select({ name: group.name, slug: group.slug })
+					.from(group)
+					.where(eq(group.id, evt.groupId))
+					.limit(1)
+					.then(([row]) => row ?? null)
+			: Promise.resolve(null),
+		getEventLineup(id),
+		evt.source === 'cmc' ? getPublicSetTimes(id) : Promise.resolve([]),
+		sellerFor(evt),
+		getVenueAccess(evt.venueId),
+		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
+		// Non-ticketed events use the lightweight RSVP join table for headcount.
+		evt.ticketingEnabled ? Promise.resolve(0) : countRsvps(id),
+		// Sustaining members see the discounted price; anonymous visitors don't.
+		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false),
+		listEventPhotos(id),
+		creditsForEvent(id, 'eventPage'),
+		recapUploadAccess(locals.user?.id, id),
+		listUpcoming()
+	]);
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
 
-	// Non-ticketed events use the lightweight RSVP join table for headcount.
-	const rsvpCount = evt.ticketingEnabled ? 0 : await countRsvps(id);
-
-	// Sustaining members see the discounted price; anonymous visitors don't.
-	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
-
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
-	const photos = await listEventPhotos(id);
-	const sponsors = await creditsForEvent(id, 'eventPage');
 	// Only this show's photographer needs the uploader here; staff have the console's.
 	const recapUpload =
-		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
+		recapAccess === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
 					recapText: evt.recapText,
@@ -393,7 +423,6 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			: null;
 
 	// "More shows" tail: other upcoming events, excluding this one.
-	const upcomingRows = await listUpcoming();
 	const upcoming = upcomingRows
 		.filter((e) => e.id !== id)
 		.slice(0, 6)
@@ -565,11 +594,16 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
 
-	const [tickets, sold] = await Promise.all([getEventTickets(id), getTicketsSold(id)]);
+	const [tickets, sold, canCountTill] = await Promise.all([
+		getEventTickets(id),
+		getTicketsSold(id),
+		can('finance.collect', { eventId: id })
+	]);
 
 	const checkedIn = tickets.filter((t) => t.status === 'checked_in').length;
 
 	return {
+		canCountTill,
 		event: {
 			id: evt.id,
 			title: evt.title,
@@ -1159,7 +1193,7 @@ function parseStaffLineupField(raw: string | undefined) {
  * landing point for an event from anywhere in the panel: a volunteer shift, a
  * reservation, a member's record, a notification. It carries the listing in
  * full (edit, poster, series, room hold) and the moderation actions; the
- * console at `[id]/production` is back-of-house, with its own query below.
+ * Production tab (`?tab=production`) is back-of-house, with its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
@@ -1182,13 +1216,62 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			can('event.publish')
 		]);
 
+	// The sidebar's Crew and Tasks boxes (#3270): a CMC show's own work, read
+	// here so the page keeps one query. Null to a reader without the board.
+	const isShow = detail.event.source === 'cmc';
+	const [crew, tasks, canAssignLead, hostOpen, lead] = isShow
+		? await Promise.all([
+				can('volunteer.read').then((ok) => (ok ? eventCrew(id) : null)),
+				can('project.read').then((ok) =>
+					ok
+						? relatedTasks({ type: 'event', id }).then((groups) =>
+								groups
+									.filter((g) => g.key === 'event')
+									.flatMap((g) => g.tasks)
+									.filter((t) => t.shifts === 0 && t.roleName !== EVENT_LEAD_VOLUNTEER_ROLE)
+									.toSorted(
+										(a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity)
+									)
+							)
+						: null
+				),
+				production ? can('volunteer.manageRoster') : Promise.resolve(false),
+				getHostShift(id).then((shift) => shift !== null),
+				production ? getShowLead(id) : Promise.resolve(null)
+			])
+		: [null, null, false, false, null];
+
+	// The Settle dialog's figures (#3273): money, so only a reader of the console
+	// gets them. Counting the till takes `production.run` on the show's project,
+	// and recording a payout the treasurer's `finance.refund`.
+	const settle =
+		isShow && production && (await canReadShow(id))
+			? {
+					settlement: await getSettlement(id),
+					canCount: production.projectId
+						? await can('production.run', { projectId: production.projectId })
+						: false,
+					canPayout: await can('finance.refund')
+				}
+			: null;
+
 	return {
 		detail,
 		canManage,
 		canPublish,
 		venues,
 		production,
+		settle,
 		recurringSeries,
+		sidebar: {
+			crew,
+			tasks,
+			canAssignLead,
+			hostOpen,
+			// The "Event lead" task and who holds it (#3274); null with no production.
+			lead: production ? (lead ?? { workOrderId: null, people: [] }) : null,
+			projectId: production?.projectId ?? null
+		},
 		recap: {
 			photos,
 			closedReason: recapClosedReason(detail.event),
@@ -1258,13 +1341,16 @@ export const setStaffEventLineup = form(
  * The production console reads on `event.read`, or on either half of the show
  * held through the committees taking part in its project.
  */
+async function canReadShow(eventId: string): Promise<boolean> {
+	if (await can('event.read')) return true;
+	const projectId = (await projectOfEvent(eventId))?.projectId ?? null;
+	if (projectId && (await can('production.book', { projectId }))) return true;
+	return !!projectId && (await can('production.run', { projectId }));
+}
+
 async function requireShowReader(eventId: string) {
 	requireUser();
-	if (await can('event.read')) return;
-	const projectId = (await projectOfEvent(eventId))?.projectId ?? null;
-	if (projectId && (await can('production.book', { projectId }))) return;
-	if (projectId && (await can('production.run', { projectId }))) return;
-	error(403, 'Not permitted');
+	if (!(await canReadShow(eventId))) error(403, 'Not permitted');
 }
 
 /** Live venues, shaped for the venue picker on the listing's edit form. */
@@ -1291,13 +1377,13 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riders,
 		production,
 		runOfShow,
-		settlement,
 		artifactRequests,
 		requestableActs,
 		hostShift,
 		deliverables,
 		committees,
-		riderStock
+		riderStock,
+		canGuests
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		listApplicableDutyLists(),
@@ -1311,11 +1397,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// Who plays when. Times are derived and written on every mutation, so this
 		// read never recomputes — it only re-checks the warnings.
 		getRunOfShow(id),
-		// What the night took, cost, and owes. Rides in the page's one query
-		// rather than beside it — `custom/no-concurrent-remote-queries` exists to
-		// stop a page fanning reads out, and this one is cheap when there is no
-		// production because it returns null on the first select.
-		getSettlement(id),
 		// What the bill still owes us, and who can be asked. Fulfilment is derived
 		// from the artifact itself, so a rider filled in unprompted already counts
 		// and nothing here has to be ticked off by hand.
@@ -1328,8 +1409,11 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		listShowDeliverables(id),
 		listCommittees(),
 		// What the bill asks CMC for, against what the catalog holds (#2724).
-		getEventRiderStock(id)
+		getEventRiderStock(id),
+		// Guest lists name people, so they ride only for who may keep them (#3274).
+		eventScope(id).then((scope) => can('event.manageGuests', scope))
 	]);
+	const guests = canGuests ? await listGuestsByAct(id) : [];
 	// The show's budget and burn are its project's (#1673).
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
@@ -1340,16 +1424,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// (#2780); everyone else sees who it is.
 		projectId ? can('production.book', { projectId }) : can('event.manage')
 	]);
-	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
-	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
-	const actContacts =
-		actOrgs.length === 0
-			? []
-			: await listActContacts(actOrgs, projectId).catch((err) => {
-					if (isHttpError(err, 403)) return null;
-					throw err;
-				});
-
 	return {
 		budget,
 		detail,
@@ -1358,15 +1432,15 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riderStock,
 		production,
 		runOfShow,
-		actContacts,
-		settlement,
 		artifactRequests,
 		requestableActs,
 		hostShift,
 		deliverables,
 		deliverableCommittees: committees,
 		canSetLead: projectId ? canBook : false,
-		canBook
+		canBook,
+		canGuests,
+		guests
 	};
 });
 
@@ -1514,7 +1588,10 @@ export const updateEvent = form(
 		rebookReservation: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
 		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.boolean().default(false)
+		overrideConflicts: z.boolean().default(false),
+		releaseHold: z.boolean().default(false),
+		// Applied for band and community listings only; a CMC bill belongs to the console.
+		lineup: z.string().optional()
 	}),
 	async (data) => {
 		const staff = await requireListingWriter(data.eventId);
@@ -1604,9 +1681,15 @@ export const updateEvent = form(
 			};
 		}
 
+		if (data.releaseHold) updateParams.releaseHold = { userId: staff.id };
+
 		try {
 			// A show's committee writes the listing too, but correcting a cancelled one is staff's.
 			await update(data.eventId, updateParams, { whileCancelled: await can('event.manage') });
+			const lineup = parseStaffLineupField(data.lineup);
+			if (lineup && (await getById(data.eventId))?.source !== 'cmc') {
+				await setEventLineup(data.eventId, lineup, { asStaff: false });
+			}
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -1626,12 +1709,13 @@ export const publishEvent = form(
 		try {
 			const outcome = await publish(data.id, {
 				acknowledged: !!data.reason,
-				reason: data.reason
+				reason: data.reason,
+				checkListing: true
 			});
 			if (!outcome.published) {
 				error(
 					422,
-					`Not ready to announce: ${outcome.warnings.join(', ')}. Give a reason to publish anyway.`
+					`Not ready to announce: ${outcome.warnings.map((w) => LISTING_GAP_WORDS[w]).join(', ')}. Give a reason to publish anyway.`
 				);
 			}
 		} catch (err) {
@@ -1678,8 +1762,8 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
 });
 
 /**
- * What a CMC listing still needs before it can go public. Empty for community
- * and band listings, which are exempt.
+ * The listing fields still missing before it can go public, whatever its
+ * source, as the keys the Listing tab anchors its fields by.
  *
  * Loaded by the publish dialog so the answer arrives before the click. It was
  * only ever thrown *by* `publish`, so the way to find out was to fail.
@@ -1762,6 +1846,58 @@ export const compTickets = form(
 	})
 );
 
+/**
+ * A guest for one act on the bill (#3274). The guard is scoped to the show the
+ * credit is on, read from the row: a client `eventId` would let a lead of one
+ * show issue seats at another.
+ */
+export const addActGuest = form(
+	z.object({
+		eventBandId: z.string().min(1),
+		attendeeName: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
+		attendeeEmail: z.string().trim().email('Enter an email address').max(254)
+	}),
+	writesAudit('event.tickets_comped', async (data) => {
+		await requireCapability('event.manageGuests', async () => {
+			const eventId = await eventOfAct(data.eventBandId);
+			return eventId ? eventScope(eventId) : {};
+		});
+		try {
+			await addGuest({
+				eventBandId: data.eventBandId,
+				name: data.attendeeName,
+				email: data.attendeeEmail
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		const eventId = await eventOfAct(data.eventBandId);
+		if (eventId) await getStaffEventProduction(eventId).refresh();
+		return { success: true };
+	})
+);
+
+export const removeActGuest = form(
+	z.object({ ticketId: z.string().min(1) }),
+	unaudited(
+		'A guest is a comp; issuing it is the audited row (event.tickets_comped).',
+		async (data) => {
+			await requireCapability('event.manageGuests', async () => {
+				const eventId = await eventOfGuest(data.ticketId);
+				return eventId ? eventScope(eventId) : {};
+			});
+			const eventId = await eventOfGuest(data.ticketId);
+			try {
+				await removeGuest(data.ticketId);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			if (eventId) await getStaffEventProduction(eventId).refresh();
+			return { success: true };
+		}
+	)
+);
+
 export const cancelTicket = form(
 	z.object({
 		ticketId: z.string().min(1)
@@ -1776,6 +1912,19 @@ export const cancelTicket = form(
 		return { success: true };
 	}
 );
+
+/**
+ * The show's "Event lead" task, made if it is not there yet, so the Crew box
+ * can open its staffing (#3274). A `command`: the box needs the task id in hand
+ * to open the dialog. Null when staff have not created the role.
+ */
+export const openEventLeadTask = command(z.object({ eventId: z.string().min(1) }), async (data) => {
+	await requireCapability('volunteer.manageRoster');
+	if (!(await projectOfEvent(data.eventId))?.productionId) error(404, 'Show not found');
+	const workOrderId = await ensureLeadTask(data.eventId);
+	void getStaffEventPage(data.eventId).refresh();
+	return { workOrderId };
+});
 
 /**
  * Let one ticket through from the scanner.

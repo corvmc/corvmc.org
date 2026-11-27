@@ -488,14 +488,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/events/[id]/production",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/events/[id]/vendors",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/events/[id]/vendors/check-in",
 		"panel": "staff"
 	},

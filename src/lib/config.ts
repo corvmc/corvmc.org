@@ -1039,6 +1039,17 @@ export const DOOR_SPLIT_ACTS_PERCENT = 70;
 export const HOST_VOLUNTEER_ROLE = 'Show Host';
 
 /**
+ * The volunteer role that works with a show's acts before the night (#3274).
+ *
+ * A task with no shift, assigned from the event page's Crew box. Its
+ * assignee holds `production.run` on the show's project and
+ * `event.manageGuests` on the event, from the moment they are assigned until
+ * `graceDays` after the show: no lead time, so no `ROLE_GRANT_LEAD_DAYS_MAX`.
+ * Matched by name, which `volunteer_role.name` makes unique.
+ */
+export const EVENT_LEAD_VOLUNTEER_ROLE = 'Event lead';
+
+/**
  * Who may post in a group's room, and how a post reaches its readers (#1304).
  *
  * The two axes an announcement differs from a chat topic on. A chat topic is
@@ -2076,7 +2087,7 @@ export const showCommitteeSlugs = {
  *
  * **Declaration order is the conventional channel order**, and the rider editor
  * uses it to place a new element rather than dropping it at the end: drums,
- * then bass, then guitars and keys, then vocals. Every input-list guide
+ * then bass, then guitars and keys, then horns and strings, then vocals. Every input-list guide
  * converges on that sequence because a console is laid out in banks of eight
  * and an engineer reads down the rhythm section first. It is a default a band
  * can reorder, not a rule — `rider_element.sortOrder` is what the list actually
@@ -2093,6 +2104,8 @@ export const riderElementKinds = [
 	'bass_rig',
 	'guitar_amp',
 	'keys',
+	'horns',
+	'strings',
 	'playback',
 	'vocals',
 	'monitor',
@@ -2106,6 +2119,8 @@ export const riderElementKindLabels: Record<RiderElementKind, string> = {
 	bass_rig: 'Bass rig',
 	guitar_amp: 'Guitar amp',
 	keys: 'Keys',
+	horns: 'Horns',
+	strings: 'Strings',
 	playback: 'Playback / tracks',
 	vocals: 'Vocals',
 	monitor: 'Monitor',
@@ -2208,6 +2223,9 @@ export const RIDER_ITEM_NOTES_MAX = 500;
  */
 export const RIDER_MAX_ELEMENTS = 60;
 export const RIDER_MAX_INPUTS_PER_ELEMENT = 24;
+
+/** Power outlets one element asks for. More than a full pedalboard and rack needs. */
+export const RIDER_MAX_OUTLETS = 12;
 
 // ---------------------------------------------------------------------------
 // Packing lists
@@ -2396,9 +2414,9 @@ export const capabilities = {
 	// staff oversight of committees: their positions, chair and grants (#3009).
 	// `group.manage` keeps bands and clubs.
 	committee: ['reviewApplications', 'manage'],
-	// `uploadRecap` and `checkIn` are also held for one show by its crew, through
-	// a volunteer-role grant: see `grantableCapabilities`.
-	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap', 'checkIn'],
+	// `uploadRecap`, `checkIn` and `manageGuests` are also held for one show by its
+	// crew, through a volunteer-role grant: see `grantableCapabilities`.
+	event: ['read', 'manage', 'publish', 'manageTickets', 'manageGuests', 'uploadRecap', 'checkIn'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
 	// hand-made ones already on the lock, re-provisioning a booking, rotating the
@@ -2775,9 +2793,9 @@ export function isCapability(name: string): name is Capability {
 /**
  * How a grantable capability may be carried.
  *
- * `role`: a confirmed signup on a shift in that role grants it for the shift's
- * event only, from the shift's start (or the role's lead time before the
- * event) until `graceDays` after it ends.
+ * `role`: a confirmed signup on a shift in that role, or an assignment to a
+ * task in it, grants it for that event only, from the shift's start (or the
+ * role's lead time before the event) until `graceDays` after it ends.
  * `committee`: `'org'` means active members hold it everywhere; `'owned'` means
  * only on records the committee owns, so a guard must name the committee.
  */
@@ -2799,6 +2817,8 @@ export const grantableCapabilities = {
 	'finance.collect': { label: 'Take card payments at the door', role: { graceDays: 0 } },
 	// The door list: every attendee's name and ticket code, during the shift (#2794).
 	'event.checkIn': { label: 'Check people in at the door', role: { graceDays: 0 } },
+	// The event lead (#3274): the guest lists of the show's acts.
+	'event.manageGuests': { label: "Keep each act's guest list", role: { graceDays: 7 } },
 	// The vendor host: give the role a lead time to open it before the market (#2993).
 	'market.host': {
 		label: 'Decide vendors, check them in and take table fees',
@@ -2827,9 +2847,11 @@ export const grantableCapabilities = {
 	},
 	// The show's own work, for every committee on the show: named on its project
 	// or owning one of its deliverables (#2959).
+	// A volunteer role carries it for one show too: the event lead (#3274).
 	'production.run': {
 		label: 'Work on its shows: times, run of show, advance, expenses, poster and description',
-		committee: 'owned'
+		committee: 'owned',
+		role: { graceDays: 7 }
 	},
 	// Org-wide: no project exists until the production does, so `'owned'` could
 	// never reach the act of opening one.

@@ -37,4 +37,11 @@ describe('EmptyState', () => {
 		const { container } = await render(EmptyState, { title: 'No bands' });
 		expect(container.querySelectorAll('p')).toHaveLength(1);
 	});
+
+	it('marks its wrapper for specs without adding a role', async () => {
+		const { container } = await render(EmptyState, { title: 'No bands' });
+		const el = container.querySelector('[data-empty-state]');
+		expect(el).not.toBeNull();
+		expect(el?.hasAttribute('role')).toBe(false);
+	});
 });

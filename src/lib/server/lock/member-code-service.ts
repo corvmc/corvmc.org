@@ -169,9 +169,10 @@ export async function hasActiveMemberCode(userId: string): Promise<boolean> {
  * Confirm standing codes that have reached the lock.
  *
  * Same reason reservations need it: the `add` is queued in U-tec's cloud and
- * acked identically whether the lock is reachable or not.
+ * acked identically whether the lock is reachable or not. A failed read goes in
+ * `warnings`: the code stays unconfirmed and the next daily run reads it again.
  */
-export async function reconcileMemberCodeSync(errors: string[]): Promise<number> {
+export async function reconcileMemberCodeSync(warnings: string[]): Promise<number> {
 	let count = 0;
 
 	const rows = await db
@@ -191,8 +192,8 @@ export async function reconcileMemberCodeSync(errors: string[]): Promise<number>
 			count++;
 		} catch (err) {
 			const msg = `Failed to confirm lock sync for member code ${row.id}: ${(err as Error).message}`;
-			console.error(msg);
-			errors.push(msg);
+			console.warn(msg);
+			warnings.push(msg);
 		}
 	}
 

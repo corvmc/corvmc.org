@@ -61,7 +61,7 @@ describe('ConfirmStep', () => {
 		await continueToConfirm();
 
 		await expect.element(page.getByTestId('confirm-slot')).toBeVisible();
-		await expect.element(page.getByTestId('confirm-pricing')).toBeVisible();
+		await expect.element(page.getByRole('definition').first()).toBeVisible();
 		expect(pricing).toHaveBeenCalledWith(
 			expect.objectContaining({ date: '2026-11-20', startTime: '18:00', endTime: '20:00' })
 		);
@@ -89,7 +89,7 @@ describe('ConfirmStep', () => {
 		} as never);
 		await continueToConfirm({ bookerType });
 
-		await expect.element(page.getByTestId('confirm-pricing')).toBeVisible();
+		await expect.element(page.getByRole('definition').first()).toBeVisible();
 		// Back, and Pay ahead when it is offered; the submit is not a step button.
 		expect(page.getByCss('[data-step="1"] button[type="button"]').all()).toHaveLength(n);
 	});
