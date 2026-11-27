@@ -164,6 +164,10 @@ The only plain API routes under `src/routes/api/` are the ones that must speak H
 outside world: Stripe/Postmark/Twilio webhooks, cron endpoints, the SSE notification
 stream, media uploads, and the U-Tec OAuth handshake.
 
+The bell holds the notification stream only while its tab is visible, and on each reconnect
+refreshes only if the stream's unread count differs from the page's. Not polling, because
+closing is the smaller change and keeps instant delivery for same-isolate pushes (#3409).
+
 ## Authentication and authorization
 
 ### Sessions (better-auth)
