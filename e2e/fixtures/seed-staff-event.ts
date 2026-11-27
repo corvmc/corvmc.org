@@ -89,6 +89,9 @@ export const SEED_SELF_CONFLICT_DATE = bookingBlock(2);
 /** The reservation-list test's block, for the same reason. */
 export const SEED_LIST_LINK_DATE = bookingBlock(3);
 
+/** The release test's block: it holds, then lets the hold go. */
+export const SEED_RELEASE_DATE = bookingBlock(5);
+
 /**
  * A day already fully booked, for the conflict-warning test. That test never
  * submits, so it raises no hold and needs only its first day — but it still gets

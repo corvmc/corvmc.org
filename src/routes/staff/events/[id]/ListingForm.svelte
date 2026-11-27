@@ -9,12 +9,14 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ConflictWarnings from '#lib/components/reservations/ConflictWarnings.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { errorMessage } from '#lib/error-message.js';
 	import { focusHashOnNavigation } from '#lib/utils/focus-hash.js';
 	import { updateEvent, checkRebook, checkConflicts } from '#lib/remote/events.remote.js';
 	import { searchBillActs } from '#lib/remote/external-acts.remote.js';
 	import { formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
+	import type { ReservationRef } from '#lib/types/entity.js';
 	import { eventTabHref } from './tabs';
 	import {
 		initialTickets,
@@ -56,7 +58,7 @@
 			ticketQuantity: number | null;
 		};
 		lineup: { id: string; name: string; bandId: string | null; actId: string | null }[];
-		linkedReservation: { id: string; startsAt: Date; endsAt: Date } | null;
+		linkedReservation: { id: string; startsAt: Date; endsAt: Date; ref: ReservationRef } | null;
 		venues: { id: string; name: string; isPrimary: boolean }[];
 		/** The record stays editable, the sale and the room are not (#2126). */
 		cancelled?: boolean;
@@ -106,16 +108,18 @@
 	let rebookNeeded = $state(false);
 	let rebookReason = $state('');
 	let rebookConfirmed = $state(false);
-	let overrideConflicts = $state(false);
-
-	// Holding the space for a listing that never had a hold. Disjoint from
-	// rebook: one with a reservation gets the rebook alert instead.
-	let reserveSpace = $state(false);
-	const canReserveSpace = $derived(!linkedReservation && !cancelled);
+	// Release hold is staged: nothing is written until Save.
+	let releasing = $state(false);
+	// The window Book anyway was pressed for. A different window asks again.
+	let overrideFor = $state('');
 
 	// Only a real overlap (a booking or a closure) gates the override. An
 	// advisory about hours or advance days asks for nothing.
 	let hasBlockingConflict = $state(false);
+
+	// The show's times as last carried into the hold window.
+	let lastStartTime = '';
+	let lastEndTime = '';
 
 	function seed() {
 		title = event.title;
@@ -125,6 +129,8 @@
 		date = toLocalDate(event.startsAt);
 		startTime = toLocalTime(event.startsAt);
 		endTime = event.endsAt ? toLocalTime(event.endsAt) : '';
+		lastStartTime = startTime;
+		lastEndTime = endTime;
 		doorsTime = event.doorsAt ? toLocalTime(event.doorsAt) : '';
 		where = initialWhere(event, !!linkedReservation, venues);
 		venueId = venues.find((v) => v.id === event.venueId && !v.isPrimary)?.id ?? '';
@@ -145,15 +151,36 @@
 	}
 	seed();
 
-	const holdOpen = $derived(
-		where === 'room' && ((rebookNeeded && rebookConfirmed) || reserveSpace)
+	const savedHold = $derived(
+		linkedReservation
+			? {
+					start: toLocalTime(linkedReservation.startsAt),
+					end: toLocalTime(linkedReservation.endsAt)
+				}
+			: null
 	);
+	// A CMC show is expected to hold the room, so it says "not held" where a
+	// community listing says nothing.
+	const showsHold = $derived(isProduction || !!linkedReservation);
+	const holdMoved = $derived(
+		!!savedHold && (holdStart !== savedHold.start || holdEnd !== savedHold.end)
+	);
+	// Hold from and until are offered whenever the room is chosen.
+	const holdOpen = $derived(where === 'room' && !cancelled && !releasing);
+	const holdWanted = $derived(
+		holdOpen && (linkedReservation ? holdMoved || (rebookNeeded && rebookConfirmed) : true)
+	);
+	const holdWindow = $derived(holdOpen && !!holdStart && !!holdEnd);
+	const blocked = $derived(holdWindow && hasBlockingConflict);
+	const windowKey = $derived(`${date}|${holdStart}|${holdEnd}`);
+	const overridden = $derived(blocked && overrideFor === windowKey);
 	const placed = $derived(
 		wherePosts(where, {
 			venueId,
 			hasHold: !!linkedReservation,
 			cancelled,
-			holdWanted: holdOpen,
+			releasing,
+			holdWanted,
 			holdStart,
 			holdEnd
 		})
@@ -170,62 +197,57 @@
 				})
 	);
 
-	/**
-	 * Show the hold as the event's own window when it is asked for. The server
-	 * falls back to exactly this, so the fields are an optional setup/teardown
-	 * override.
-	 */
-	function toggleReserveSpace() {
-		if (reserveSpace) {
+	// A hold is the room's, so leaving it drops a staged release and any override.
+	// Choosing the room with nothing held starts the window at the show's own times;
+	// the fields are an optional setup/teardown override, and blank holds nothing.
+	function chooseWhere() {
+		if (where === 'venue' && !venueId) venueId = outsideVenues[0]?.id ?? '';
+		overrideFor = '';
+		hasBlockingConflict = false;
+		releasing = false;
+		if (where !== 'room') {
+			rebookConfirmed = false;
+			if (!linkedReservation) {
+				holdStart = '';
+				holdEnd = '';
+			}
+			return;
+		}
+		if (!linkedReservation) {
 			holdStart = startTime;
 			holdEnd = endTime;
 			lastStartTime = startTime;
 			lastEndTime = endTime;
-		} else {
-			clearHold();
 		}
 	}
 
-	// Hydration adopts a box ticked before it ran without firing its change
-	// handler, so the hold would open with empty times and post nothing.
-	// `ready` marks the form as interactive.
+	// The server renders the form before it is interactive; `ready` marks the
+	// moment it has mounted, for the e2e specs and anything else that must wait.
 	let ready = $state(false);
 	onMount(() => {
-		if (reserveSpace && !holdStart) toggleReserveSpace();
 		ready = true;
 	});
 
-	function clearHold() {
-		holdStart = '';
-		holdEnd = '';
+	function releaseHold() {
+		releasing = true;
+		overrideFor = '';
 		hasBlockingConflict = false;
-		overrideConflicts = false;
 	}
 
-	// A hold is the room's, so leaving it drops a pending hold and its override.
-	function chooseWhere() {
-		if (where === 'venue' && !venueId) venueId = outsideVenues[0]?.id ?? '';
-		if (where === 'room') return;
-		reserveSpace = false;
-		rebookConfirmed = false;
-		if (!linkedReservation) clearHold();
-		else {
-			hasBlockingConflict = false;
-			overrideConflicts = false;
-		}
+	function bookAnyway() {
+		overrideFor = windowKey;
 	}
 
 	// A new hold's window is setup and teardown padding around the show, so it
 	// moves when the show is re-timed (#1866). Run from the inputs, not an effect.
-	let lastStartTime = '';
-	let lastEndTime = '';
 	function carryHoldWindow() {
-		if (!reserveSpace) return;
-		if (startTime && lastStartTime && holdStart) {
-			holdStart = shiftTime(holdStart, toMinutes(startTime) - toMinutes(lastStartTime));
-		}
-		if (endTime && lastEndTime && holdEnd) {
-			holdEnd = shiftTime(holdEnd, toMinutes(endTime) - toMinutes(lastEndTime));
+		if (!linkedReservation && where === 'room') {
+			if (startTime && lastStartTime && holdStart) {
+				holdStart = shiftTime(holdStart, toMinutes(startTime) - toMinutes(lastStartTime));
+			}
+			if (endTime && lastEndTime && holdEnd) {
+				holdEnd = shiftTime(holdEnd, toMinutes(endTime) - toMinutes(lastEndTime));
+			}
 		}
 		lastStartTime = startTime;
 		lastEndTime = endTime;
@@ -237,23 +259,32 @@
 	}
 
 	async function checkForRebook() {
+		const wasNeeded = rebookNeeded;
 		if (cancelled || !linkedReservation || !date || !startTime || !endTime) {
 			rebookNeeded = false;
-			return;
+		} else {
+			const range = isoRange(date, startTime, endTime);
+			const result = await checkRebook({
+				eventId: event.id,
+				newStartsAt: range.startsAt,
+				newEndsAt: range.endsAt
+			});
+			rebookNeeded = result.needed;
+			rebookReason = result.reason ?? '';
 		}
-		const range = isoRange(date, startTime, endTime);
-		const result = await checkRebook({
-			eventId: event.id,
-			newStartsAt: range.startsAt,
-			newEndsAt: range.endsAt
-		});
-		rebookNeeded = result.needed;
-		rebookReason = result.reason ?? '';
-		if (result.needed) {
-			holdStart = startTime;
-			holdEnd = endTime;
+		// The window follows the show only once Rebook the hold is pressed, and
+		// moving the show back inside the hold withdraws that.
+		if (wasNeeded && !rebookNeeded && savedHold) {
+			holdStart = savedHold.start;
+			holdEnd = savedHold.end;
 			rebookConfirmed = false;
 		}
+	}
+
+	function rebookHold() {
+		holdStart = startTime;
+		holdEnd = endTime;
+		rebookConfirmed = true;
 	}
 
 	/** The check is scoped to this listing, so its guard can admit the show's committee. */
@@ -277,7 +308,7 @@
 	const whereState = $derived(
 		where !== 'room'
 			? m.staff_events_id_listing_form_off_site_label()
-			: linkedReservation
+			: linkedReservation && !releasing
 				? m.staff_events_id_listing_form_held_label()
 				: m.staff_events_id_listing_form_not_held_label()
 	);
@@ -322,7 +353,7 @@
 		{#if placed.releaseHold}
 			<input {...fields.releaseHold.as('hidden', true)} />
 		{/if}
-		{#if overrideConflicts}
+		{#if overridden}
 			<input {...fields.overrideConflicts.as('hidden', true)} />
 		{/if}
 
@@ -463,55 +494,82 @@
 						</p>
 					{/if}
 
-					{#if where === 'room' && rebookNeeded}
+					{#if where === 'room' && showsHold}
+						<div class="space-y-3" data-testid="space-hold">
+							{#if linkedReservation}
+								<EntityIdentity ref={linkedReservation.ref} size="md" status />
+							{/if}
+							{#if releasing}
+								<div class="flex flex-wrap items-center gap-3">
+									<p class="text-muted">{m.staff_events_id_listing_form_releasing_text()}</p>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onclick={() => (releasing = false)}
+									>
+										{m.staff_events_id_listing_form_keep_hold_label()}
+									</Button>
+								</div>
+							{:else if linkedReservation}
+								<div class="flex flex-wrap items-center gap-3">
+									<p class="font-medium">
+										{blocked
+											? m.staff_events_id_listing_form_held_conflict_text()
+											: m.staff_events_id_listing_form_held_clear_text()}
+									</p>
+									{#if !cancelled}
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											onclick={releaseHold}
+											data-testid="release-hold"
+										>
+											{m.staff_events_id_listing_form_release_hold_label()}
+										</Button>
+									{/if}
+								</div>
+							{:else}
+								<p class="text-muted">{m.staff_events_id_listing_form_no_hold_text()}</p>
+							{/if}
+						</div>
+					{/if}
+
+					{#if where === 'room' && linkedReservation && rebookNeeded && !cancelled && !releasing}
 						<Alert type="warning">
 							<div class="w-full space-y-3">
 								<p class="font-medium">
 									{m.events_listing_edit_form_reservation_needs_rebooking_text()}
 								</p>
 								<p class="text-sm">
-									{m.events_listing_edit_form_existing_reservation_will_cancelled_text({
-										rebookReason
-									})}
+									{rebookConfirmed
+										? m.staff_events_id_listing_form_rebooked_text()
+										: m.staff_events_id_listing_form_rebook_moves_text({ rebookReason })}
 								</p>
-								<FormField id="confirmRebook" issues={[]}>
-									<label class="label cursor-pointer justify-start gap-3">
-										<input
-											type="checkbox"
-											bind:checked={rebookConfirmed}
-											data-testid="confirm-rebook"
-											class="checkbox checkbox-sm"
-										/>
-										<span class="fieldset-legend"
-											>{m.events_listing_edit_form_confirm_rebook_label()}</span
-										>
-									</label>
-								</FormField>
 							</div>
+							{#snippet action()}
+								{#if !rebookConfirmed}
+									<Button
+										type="button"
+										variant="default"
+										size="sm"
+										onclick={rebookHold}
+										data-testid="confirm-rebook"
+									>
+										{m.staff_events_id_listing_form_rebook_hold_label()}
+									</Button>
+								{/if}
+							{/snippet}
 						</Alert>
-					{/if}
-
-					{#if where === 'room' && canReserveSpace}
-						<FormField id="reserveSpace" issues={[]}>
-							<label class="label cursor-pointer justify-start gap-3">
-								<input
-									type="checkbox"
-									bind:checked={reserveSpace}
-									data-testid="reserve-space"
-									onchange={toggleReserveSpace}
-									class="checkbox checkbox-sm"
-								/>
-								<span class="fieldset-legend"
-									>{m.events_listing_edit_form_reserve_practice_space_label()}</span
-								>
-							</label>
-						</FormField>
 					{/if}
 
 					{#if holdOpen}
 						<Card tone="base-200" class="space-y-4 p-4">
 							<p class="text-muted">
-								{m.events_listing_edit_form_reservation_times_can_differ_from_text()}
+								{linkedReservation
+									? m.events_listing_edit_form_reservation_times_can_differ_from_text()
+									: m.staff_events_id_listing_form_hold_blank_text()}
 							</p>
 
 							<!-- The show's re-timing rewrites these in code, and FormField's field mode
@@ -520,7 +578,7 @@
 							<div class="grid grid-cols-2 gap-4">
 								<FormField
 									field={fields.reservationStartTime}
-									label={m.events_listing_edit_form_reservation_start_label()}
+									label={m.staff_events_id_listing_form_hold_from_label()}
 								>
 									{#snippet input(id)}
 										<input
@@ -528,13 +586,14 @@
 											{...fields.reservationStartTime.as('text')}
 											type="time"
 											bind:value={holdStart}
+											required={!!linkedReservation}
 											class="input w-full"
 										/>
 									{/snippet}
 								</FormField>
 								<FormField
 									field={fields.reservationEndTime}
-									label={m.events_listing_edit_form_reservation_end_label()}
+									label={m.staff_events_id_listing_form_hold_until_label()}
 								>
 									{#snippet input(id)}
 										<input
@@ -542,34 +601,41 @@
 											{...fields.reservationEndTime.as('text')}
 											type="time"
 											bind:value={holdEnd}
+											required={!!linkedReservation}
 											class="input w-full"
 										/>
 									{/snippet}
 								</FormField>
 							</div>
 
-							<ConflictWarnings
-								{date}
-								startTime={holdStart}
-								endTime={holdEnd}
-								checkConflicts={checkListingConflicts}
-								excludeReservationId={linkedReservation?.id}
-								bind:hasBlockingConflict
-							/>
-							{#if hasBlockingConflict}
-								<FormField id="overrideConflicts" issues={[]}>
-									<label class="label cursor-pointer justify-start gap-3">
-										<input
-											type="checkbox"
-											bind:checked={overrideConflicts}
+							{#if holdWindow}
+								<ConflictWarnings
+									{date}
+									startTime={holdStart}
+									endTime={holdEnd}
+									checkConflicts={checkListingConflicts}
+									excludeReservationId={linkedReservation?.id}
+									bind:hasBlockingConflict
+								/>
+							{/if}
+							{#if blocked}
+								{#if overridden}
+									<p class="text-sm font-medium">
+										{m.staff_events_id_listing_form_booking_anyway_text()}
+									</p>
+								{:else}
+									<div>
+										<Button
+											type="button"
+											variant="warning"
+											size="sm"
+											onclick={bookAnyway}
 											data-testid="override-conflicts"
-											class="checkbox checkbox-sm"
-										/>
-										<span class="fieldset-legend">
-											{m.events_listing_edit_form_book_anyway_i_know_double_label()}
-										</span>
-									</label>
-								</FormField>
+										>
+											{m.staff_events_id_listing_form_book_anyway_label()}
+										</Button>
+									</div>
+								{/if}
 							{/if}
 						</Card>
 					{/if}
@@ -712,7 +778,7 @@
 				<SubmitButton
 					label={m.events_save_label()}
 					variant="primary"
-					disabled={hasBlockingConflict && !overrideConflicts}
+					disabled={blocked && !overridden}
 				/>
 			</div>
 		{/if}

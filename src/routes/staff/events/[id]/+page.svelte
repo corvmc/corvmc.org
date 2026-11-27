@@ -16,7 +16,6 @@
 	import ListingShare from '#lib/components/events/ListingShare.svelte';
 	import RecurringSeriesBar from '#lib/components/events/RecurringSeriesBar.svelte';
 	import RepeatEventAction from '#lib/components/events/RepeatEventAction.svelte';
-	import SpaceHoldCard from '#lib/components/events/SpaceHoldCard.svelte';
 	import ListingTicketing from '#lib/components/events/ListingTicketing.svelte';
 	import DoorSalesCard from '#lib/components/events/DoorSalesCard.svelte';
 	import {
@@ -95,10 +94,6 @@
 	}
 
 	let settleOpen = $state(false);
-
-	// Held, or a CMC show that ought to say whether it is. A band gig or a
-	// community listing with no hold has no question for this card to answer.
-	const showsHold = $derived(isProduction || !!detail.linkedReservation);
 
 	// Our own listings and a club's sessions repeat; a band's gig or a community
 	// listing is someone else's to schedule.
@@ -324,15 +319,6 @@
 
 					{#if detail.door}
 						<DoorSalesCard eventId={evt.id} takings={detail.door.takings} open={detail.door.open} />
-					{/if}
-
-					{#if showsHold}
-						<SpaceHoldCard
-							venueName={evt.venueName}
-							venueIsPrimary={evt.venueIsPrimary}
-							reservation={detail.linkedReservation}
-							editableEventId={evt.status !== 'cancelled' ? evt.id : undefined}
-						/>
 					{/if}
 
 					<!-- A ticketed event's headcount is its tickets; RSVPs are for the rest. -->

@@ -3705,5 +3705,19 @@
 	"staff_events_id_listing_form_through_cmc_label": "Through CMC",
 	"staff_events_id_listing_form_band_sells_label": "Sold by the band",
 	"staff_events_id_listing_form_band_sells_text": "The band sells tickets itself.",
-	"staff_events_id_listing_form_sold_label": "Sale"
+	"staff_events_id_listing_form_sold_label": "Sale",
+	"staff_events_id_listing_form_hold_from_label": "Hold from",
+	"staff_events_id_listing_form_hold_until_label": "Hold until",
+	"staff_events_id_listing_form_hold_blank_text": "Leave both blank to hold no space.",
+	"staff_events_id_listing_form_held_clear_text": "Held · no conflicts",
+	"staff_events_id_listing_form_held_conflict_text": "Held · conflict",
+	"staff_events_id_listing_form_no_hold_text": "No space held.",
+	"staff_events_id_listing_form_release_hold_label": "Release hold",
+	"staff_events_id_listing_form_keep_hold_label": "Keep hold",
+	"staff_events_id_listing_form_releasing_text": "The hold is released when you save.",
+	"staff_events_id_listing_form_book_anyway_label": "Book anyway",
+	"staff_events_id_listing_form_booking_anyway_text": "This window double-books the space. It is booked when you save.",
+	"staff_events_id_listing_form_rebook_hold_label": "Rebook the hold",
+	"staff_events_id_listing_form_rebook_moves_text": "{rebookReason}. The hold moves in place and keeps its door code.",
+	"staff_events_id_listing_form_rebooked_text": "The hold moves to the show's new times when you save."
 }

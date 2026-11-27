@@ -114,6 +114,7 @@ describe('wherePosts', () => {
 		venueId: 'riverfront',
 		hasHold: false,
 		cancelled: false,
+		releasing: false,
 		holdWanted: false,
 		holdStart: '',
 		holdEnd: ''
@@ -135,6 +136,23 @@ describe('wherePosts', () => {
 		expect(
 			wherePosts('room', { ...wanted, holdStart: '18:00', holdEnd: '23:00' }).rebookReservation
 		).toBe(true);
+	});
+
+	it('releases the hold on Save when Release hold is staged, and writes no window', () => {
+		const staged = {
+			...state,
+			hasHold: true,
+			releasing: true,
+			holdWanted: true,
+			holdStart: '18:00',
+			holdEnd: '23:00'
+		};
+		expect(wherePosts('room', staged)).toMatchObject({
+			releaseHold: true,
+			rebookReservation: false
+		});
+		expect(wherePosts('room', { ...staged, cancelled: true }).releaseHold).toBe(false);
+		expect(wherePosts('room', { ...staged, hasHold: false }).releaseHold).toBe(false);
 	});
 
 	it('posts the picked venue and no place for a saved venue', () => {
