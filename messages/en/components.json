@@ -452,7 +452,7 @@
 	"events_repeat_event_success_toast": "Series started",
 	"events_save_label": "Save",
 	"events_show_label": "Show",
-	"events_space_hold_card_no_space_held_event_use_text": "No space held for this event. Use Edit to reserve the practice space.",
+	"events_space_hold_card_no_space_held_event_use_text": "No space held for this event. Tick Reserve practice space under Where to hold it.",
 	"events_space_hold_card_off_site_practice_space_stays_text": "Off-site — {venueName}. The practice space stays bookable while this runs.",
 	"events_space_hold_card_title": "Room hold",
 	"events_start_time_label": "Start time",

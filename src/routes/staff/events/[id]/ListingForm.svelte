@@ -503,19 +503,38 @@
 								{m.events_listing_edit_form_reservation_times_can_differ_from_text()}
 							</p>
 
+							<!-- The show's re-timing rewrites these in code, and FormField's field mode
+							     only passes `value` one way: a typed-in box would keep showing and
+							     posting its old text. A bound input follows the state. -->
 							<div class="grid grid-cols-2 gap-4">
 								<FormField
 									field={fields.reservationStartTime}
-									type="time"
 									label={m.events_listing_edit_form_reservation_start_label()}
-									bind:value={holdStart}
-								/>
+								>
+									{#snippet input(id)}
+										<input
+											{id}
+											{...fields.reservationStartTime.as('text')}
+											type="time"
+											bind:value={holdStart}
+											class="input w-full"
+										/>
+									{/snippet}
+								</FormField>
 								<FormField
 									field={fields.reservationEndTime}
-									type="time"
 									label={m.events_listing_edit_form_reservation_end_label()}
-									bind:value={holdEnd}
-								/>
+								>
+									{#snippet input(id)}
+										<input
+											{id}
+											{...fields.reservationEndTime.as('text')}
+											type="time"
+											bind:value={holdEnd}
+											class="input w-full"
+										/>
+									{/snippet}
+								</FormField>
 							</div>
 
 							<ConflictWarnings
