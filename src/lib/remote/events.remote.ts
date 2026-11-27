@@ -569,6 +569,12 @@ export const getTicketPurchaseSuccess = query(
 		const tickets = await getTicketsByPurchase(purchaseId);
 		if (tickets.length === 0) throw error(404, 'Purchase not found');
 
+		// Never looks the address up: the purchase id is the only credential here, and
+		// the viewer may not own the address, so the answer cannot depend on an account.
+		const { locals } = getRequestEvent();
+		const accountOffer =
+			!locals.user && tickets.every((t) => !t.userId) ? { email: tickets[0].attendeeEmail } : null;
+
 		return {
 			event: {
 				id: evt.id,
@@ -577,6 +583,7 @@ export const getTicketPurchaseSuccess = query(
 				endsAt: evt.endsAt,
 				doorsAt: evt.doorsAt ?? null
 			},
+			accountOffer,
 			tickets: tickets.map((t) => ({
 				id: t.id,
 				code: t.code,

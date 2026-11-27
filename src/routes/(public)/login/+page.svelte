@@ -37,6 +37,13 @@
 	const returnTo = $derived(safeReturnPath(page.url.searchParams.get('redirect')));
 	// What the visitor was doing when the interrupt sent them here.
 	const intent = $derived(page.url.searchParams.get('intent')?.trim().slice(0, 120) || null);
+	// A starting value for the email field, e.g. the address a guest bought tickets
+	// under. Editable, and never applied to an invite, whose address is fixed.
+	const emailPrefill = $derived(
+		page.url.searchParams.has('invite')
+			? undefined
+			: page.url.searchParams.get('email')?.trim().slice(0, 254) || undefined
+	);
 	$effect(() => {
 		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('member'));
 	});
@@ -166,27 +173,27 @@
 				<CardBody class="gap-4">
 					{#if inviteMeta}
 						<Alert type="info" class="text-sm">
-							<span
-								><ParaglideMessage
+							<span>
+								<ParaglideMessage
 									message={m.public_login_invited_join_create_account_get_body}
 									inputs={{ inviterName: inviteMeta.inviterName, groupName: inviteMeta.groupName }}
-									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-										>{/snippet}</ParaglideMessage
-								></span
-							>
+								>
+									{#snippet strong({ children })}<strong>{@render children?.()}</strong>{/snippet}
+								</ParaglideMessage>
+							</span>
 						</Alert>
 					{/if}
 
 					{#if intent && !inviteMeta}
 						<Alert type="info" class="text-sm">
-							<span
-								><ParaglideMessage
+							<span>
+								<ParaglideMessage
 									message={m.public_login_sign_create_free_account_ll_body}
 									inputs={{ intent }}
-									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-										>{/snippet}</ParaglideMessage
-								></span
-							>
+								>
+									{#snippet strong({ children })}<strong>{@render children?.()}</strong>{/snippet}
+								</ParaglideMessage>
+							</span>
 						</Alert>
 					{/if}
 
@@ -217,7 +224,12 @@
 								readonly
 							/>
 						{:else}
-							<Field name="email" type="email" label={m.public_email_label()} />
+							<Field
+								name="email"
+								type="email"
+								label={m.public_email_label()}
+								value={emailPrefill}
+							/>
 						{/if}
 						<Field
 							name="password"
@@ -272,9 +284,9 @@
 
 					{#if mode === 'login'}
 						<div class="text-center text-sm">
-							<a class="link" href={resolve('forgot-password')}
-								>{m.public_login_forgot_password_text()}</a
-							>
+							<a class="link" href={resolve('forgot-password')}>
+								{m.public_login_forgot_password_text()}
+							</a>
 						</div>
 					{/if}
 

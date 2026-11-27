@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -11,6 +12,8 @@
 	import { getTicketPurchaseSuccess } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { accountOfferPath } from '#lib/utils/account-offer.js';
+	import { signInHref } from '#lib/utils/sign-in.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -80,6 +83,28 @@
 				? m.public_events_id_tickets_success_we_haven_t_had_confirmation_body()
 				: m.public_events_id_tickets_success_confirming_payment_body()}
 		</Alert>
+	{/if}
+
+	<!-- Shown to every signed-out viewer of an unlinked purchase, whether or not the address has an account. -->
+	{#if data.accountOffer}
+		<Card>
+			<CardBody class="space-y-3">
+				<CardTitle>{m.public_events_id_tickets_success_account_offer_title()}</CardTitle>
+				<p class="text-muted">
+					{m.public_events_id_tickets_success_account_offer_body({
+						email: data.accountOffer.email
+					})}
+				</p>
+				<div class="flex flex-wrap gap-2">
+					<Button href={accountOfferPath(data.accountOffer.email)} variant="primary">
+						{m.public_login_create_account_label()}
+					</Button>
+					<Button href={signInHref({ returnTo: '/member/events' })} variant="ghost">
+						{m.public_sign_label()}
+					</Button>
+				</div>
+			</CardBody>
+		</Card>
 	{/if}
 
 	<!-- Ticket codes -->

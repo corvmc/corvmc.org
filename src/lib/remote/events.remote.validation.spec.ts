@@ -137,10 +137,11 @@ vi.mock('#lib/server/ticket/ticket-seller.js', () => ({
 	)
 }));
 
-// Guest submission — no logged-in account to fall back on for name/email.
+// Guest submission by default — no logged-in account to fall back on for name/email.
+const viewer = vi.hoisted(() => ({ user: null as { id: string } | null }));
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
-		locals: { user: null },
+		locals: { user: viewer.user },
 		url: new URL('http://localhost/'),
 		request: { headers: new Headers() }
 	}),
@@ -162,6 +163,8 @@ const events = (await import('./events.remote')) as unknown as Record<
 	string,
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
+
+const ticketServiceModule = await import('#lib/server/ticket/ticket-service.js');
 
 const conflictService =
 	(await import('#lib/server/reservation/conflict-service.js')) as unknown as {
@@ -499,5 +502,50 @@ describe('checkConflicts — excludeReservationId', () => {
 		};
 
 		expect(result.conflicts.map((c) => c.id)).toEqual(['a', 'b']);
+	});
+});
+
+describe('getTicketPurchaseSuccess account offer', () => {
+	const ticketsService = vi.mocked(ticketServiceModule.getTicketsByPurchase);
+	const ticket = (userId: string | null) =>
+		({
+			id: userId ? 'ticket-owned' : 'ticket-guest',
+			code: 'ABC123',
+			attendeeName: 'Fan',
+			attendeeEmail: 'Fan@Example.com',
+			status: 'valid',
+			userId
+		}) as never;
+	const run = () =>
+		events.getTicketPurchaseSuccess({ eventId: 'evt-1', purchaseId: 'p-1' }, undefined) as Promise<{
+			accountOffer: { email: string } | null;
+			tickets: Array<Record<string, unknown>>;
+		}>;
+
+	beforeEach(() => {
+		viewer.user = null;
+	});
+
+	it('offers the buyer address when a signed-out viewer holds an unlinked purchase', async () => {
+		ticketsService.mockResolvedValueOnce([ticket(null), ticket(null)]);
+		expect((await run()).accountOffer).toEqual({ email: 'Fan@Example.com' });
+	});
+
+	it('offers nothing to a signed-in viewer', async () => {
+		viewer.user = { id: 'user-1' };
+		ticketsService.mockResolvedValueOnce([ticket(null)]);
+		expect((await run()).accountOffer).toBeNull();
+	});
+
+	it('offers nothing once any ticket belongs to an account', async () => {
+		ticketsService.mockResolvedValueOnce([ticket(null), ticket('user-2')]);
+		expect((await run()).accountOffer).toBeNull();
+	});
+
+	it('never returns a user id', async () => {
+		ticketsService.mockResolvedValueOnce([ticket('user-2')]);
+		const result = await run();
+		expect(JSON.stringify(result)).not.toContain('user-2');
+		expect(result.tickets[0]).not.toHaveProperty('userId');
 	});
 });

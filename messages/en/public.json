@@ -286,6 +286,8 @@
 	"public_events_id_tickets_rsvps_closed_text": "Tickets and RSVPs are closed.",
 	"public_events_id_tickets_sold_out_text": "Sold out",
 	"public_events_id_tickets_spots_remaining_text": "{remaining} spots remaining",
+	"public_events_id_tickets_success_account_offer_body": "Tickets bought with {email} appear in the account once that address is verified.",
+	"public_events_id_tickets_success_account_offer_title": "Ticket account",
 	"public_events_id_tickets_success_back_events_label": "Back to events",
 	"public_events_id_tickets_success_confirmation_email_receipt_text": "A confirmation email and receipt will be sent to {value}.",
 	"public_events_id_tickets_success_confirming_payment_body": "Confirming your payment…",
