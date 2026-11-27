@@ -156,6 +156,14 @@ function clubDay(iso: ClubDate): string {
 	return formatDateLong(new Date(`${iso}T12:00:00Z`));
 }
 
+/**
+ * A shift's start as the `happensAt` of its notice. A work order can be
+ * unscheduled, and `null` is how a caller says there is no time to wait on.
+ */
+function instantOf(iso: string | null): Date | null {
+	return iso ? new Date(iso) : null;
+}
+
 /** A payload's club wall-clock time, `HH:MM`, as "3:00 PM". */
 const clubTime = (time: ClubTime): string => formatSlotTime(time);
 
@@ -376,6 +384,7 @@ export function registerAllNotificationListeners(): void {
 						type: 'event_cancellation',
 						userId: holder.userId,
 						userEmail: holder.attendeeEmail,
+						happensAt: new Date(event.startsAt),
 						title: `${event.eventTitle} has been cancelled`,
 						body: event.refundNote,
 						href: '/member/purchases',
@@ -635,6 +644,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'recurring_skipped',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.skippedDate, event.startTime),
 			title: 'Recurring reservation skipped',
 			body: `${clubDay(event.skippedDate)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: '/member/reservations',
@@ -661,6 +671,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'event_recurring_reservation_skipped',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Recurring event could not reserve space',
 			body: `${event.eventTitle} on ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: `/staff/events/${event.eventId}`,
@@ -690,6 +701,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'equipment_loan_scheduled',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: new Date(event.scheduledPickupDate),
 			title: `Equipment pickup confirmed: ${event.equipmentName}`,
 			body: `Pickup on ${formatClubDay(event.scheduledPickupDate)}`,
 			href: '/member/equipment/loans',
@@ -1110,6 +1122,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'reservation_confirmed',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Reservation confirmed',
 			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
@@ -1152,6 +1165,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'reservation_cancelled',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Reservation cancelled',
 			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
 			href: '/member/reservations',
@@ -1172,6 +1186,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'recurring_waitlisted',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Recurring reservation waitlisted',
 			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: waiting for slot`,
 			href: '/member/reservations',
@@ -1205,6 +1220,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'recurring_rescheduled',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Recurring reservation changed',
 			body: `New schedule from ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
 			href: '/member/reservations',
@@ -1250,6 +1266,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'waitlist_expired',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: clubInstant(event.date, event.startTime),
 			title: 'Waitlisted reservation expired',
 			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)} was not confirmed in time`,
 			href: '/member/reservations',
@@ -1346,6 +1363,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'band_lineup_invited',
 					userId: admin.userId,
 					userEmail: admin.userEmail,
+					happensAt: new Date(event.startsAt),
 					title: `${host} added ${event.invitedBandName} to a bill`,
 					body: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}". Confirm to show it on your profile.`,
 					href,
@@ -1386,6 +1404,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'production_cancelled',
 					userId: member.userId,
 					userEmail: member.userEmail,
+					happensAt: new Date(event.startsAt),
 					title: `${event.eventTitle} was cancelled`,
 					body: `${line} Called off: ${items}.`,
 					href: `/member/groups/${member.committeeSlug}`,
@@ -1453,6 +1472,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'deliverable_due',
 			userId: recipient.userId,
 			userEmail: recipient.userEmail,
+			happensAt: new Date(first.dueAt),
 			title,
 			body: single ? `${first.groupName} · ${line}` : line,
 			href: items.every((i) => i.forLead)
@@ -1566,6 +1586,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'band_event_unpublished',
 					userId: admin.userId,
 					userEmail: admin.userEmail,
+					happensAt: null,
 					title: `"${event.eventTitle}" was unlisted`,
 					body: event.notes
 						? `CMC staff removed this event from the public gig guide: ${event.notes}`
@@ -1695,6 +1716,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_invited',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: instantOf(event.startsAt),
 			title: `Can you take ${shiftLabel(event)}?`,
 			body: `${formatShiftWhen(event.startsAt, event.endsAt)} — say yes or no from your dashboard`,
 			href: '/member/volunteer',
@@ -1766,6 +1788,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_declined',
 					userId: member.userId,
 					userEmail: member.userEmail,
+					happensAt: instantOf(event.startsAt),
 					title: `${event.userName} can't do ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
 					href: '/staff/volunteering'
@@ -1789,6 +1812,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_claimed',
 					userId: member.id,
 					userEmail: member.email,
+					happensAt: instantOf(event.startsAt),
 					title: `${event.userName} claimed ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
 					href: '/staff/volunteering?needs=claims'
@@ -1810,6 +1834,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_confirmed',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: instantOf(event.startsAt),
 			title: `You're on for ${shiftLabel(event)}`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer',
@@ -1845,6 +1870,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'orientation_confirmed',
 			userId: member.userId,
 			userEmail: member.email,
+			happensAt: instantOf(event.startsAt),
 			title: `${event.userName} is meeting you at the space`,
 			body: when,
 			href: '/member/reservations',
@@ -1874,6 +1900,7 @@ export function registerAllNotificationListeners(): void {
 					type: 'volunteer_shift_dropped',
 					userId: member.userId,
 					userEmail: member.userEmail,
+					happensAt: instantOf(event.startsAt),
 					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
 					href: '/staff/volunteering?needs=short'
@@ -1896,6 +1923,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'volunteer_shift_cancelled',
 			userId: event.userId,
 			userEmail: event.userEmail,
+			happensAt: instantOf(event.startsAt),
 			title: `${shiftLabel(event)} is off`,
 			body: formatShiftWhen(event.startsAt, event.endsAt),
 			href: '/member/volunteer',
@@ -2159,6 +2187,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'community_event_reviewed',
 			userId: event.submitterUserId,
 			userEmail: event.submitterEmail,
+			happensAt: null,
 			title: approved
 				? `"${event.eventTitle}" is on the calendar`
 				: `"${event.eventTitle}" wasn't published`,
@@ -2195,6 +2224,7 @@ export function registerAllNotificationListeners(): void {
 			type: 'community_event_unpublished',
 			userId: event.submitterUserId,
 			userEmail: event.submitterEmail,
+			happensAt: null,
 			title: `"${event.eventTitle}" was removed from the calendar`,
 			body: event.notes ?? undefined,
 			href: `/member/events/${event.eventId}/manage`,
