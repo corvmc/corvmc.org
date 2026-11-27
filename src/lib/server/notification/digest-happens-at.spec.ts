@@ -5,13 +5,9 @@ import ts from 'typescript';
 import { NOTIFICATION_TYPES, holdsForDigest } from '#lib/server/db/schema/notification.js';
 
 /**
- * A `digestIfLater` notice with no `happensAt` is delivered at once, which is
- * the same as a type that was never classified (#3409).
- *
- * The dispatcher cannot tell "the caller has no time" from "the caller forgot
- * it", so the call site has to say which: a `Date`, or `null` for a subject
- * with no time. Walking every `dispatch`/`dispatchBatch` call is the cheapest
- * place to catch a new sender that says nothing.
+ * A `digestIfLater` notice with no `happensAt` is delivered at once (#3409).
+ * The dispatcher cannot tell "no time" from "forgot it", so each call site
+ * says which: a `Date`, or `null` for a subject with no time.
  */
 
 const IF_LATER = new Set(
