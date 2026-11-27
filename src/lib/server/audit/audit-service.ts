@@ -50,7 +50,8 @@ const MAX_LABEL_LENGTH = 200;
 
 const SYSTEM_ACTOR: AuditActor = { id: null, name: 'System', email: '' };
 
-function currentActor(): AuditActor {
+/** Who the request is from, or System outside one. */
+export function currentActor(): AuditActor {
 	try {
 		const { user: u, impersonator } = getRequestEvent().locals;
 		// Viewing as a member, the admin did it (#2847).
@@ -67,27 +68,35 @@ function currentActor(): AuditActor {
 // ---------------------------------------------------------------------------
 
 /**
+ * The insert for one entry, for a caller that batches it with the write it
+ * records (`db.batch`) so the two land together. Throws on oversized details.
+ */
+export function auditEntryStatement(input: AuditEntryInput) {
+	const details = JSON.stringify(input.details);
+	if (new TextEncoder().encode(details).length > MAX_DETAILS_BYTES) {
+		throw new Error(`Audit details for ${input.action} exceed ${MAX_DETAILS_BYTES} bytes`);
+	}
+	const actor = input.actor ?? currentActor();
+	return db.insert(auditLog).values({
+		action: input.action,
+		actorUserId: actor.id,
+		actorName: actor.name,
+		actorEmail: actor.email,
+		subjectType: input.subject.type,
+		subjectId: input.subject.id,
+		subjectLabel: input.subject.label?.slice(0, MAX_LABEL_LENGTH) ?? null,
+		details: input.details as Record<string, unknown>
+	});
+}
+
+/**
  * Append one entry. Never throws: the action it records has already happened,
  * and a failed audit write must not turn that into an error the staffer sees.
  * Failures go to Sentry.
  */
 export async function recordAuditEntry(input: AuditEntryInput): Promise<void> {
 	try {
-		const details = JSON.stringify(input.details);
-		if (new TextEncoder().encode(details).length > MAX_DETAILS_BYTES) {
-			throw new Error(`Audit details for ${input.action} exceed ${MAX_DETAILS_BYTES} bytes`);
-		}
-		const actor = input.actor ?? currentActor();
-		await db.insert(auditLog).values({
-			action: input.action,
-			actorUserId: actor.id,
-			actorName: actor.name,
-			actorEmail: actor.email,
-			subjectType: input.subject.type,
-			subjectId: input.subject.id,
-			subjectLabel: input.subject.label?.slice(0, MAX_LABEL_LENGTH) ?? null,
-			details: input.details as Record<string, unknown>
-		});
+		await auditEntryStatement(input);
 	} catch (err) {
 		captureException(err);
 	}

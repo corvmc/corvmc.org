@@ -76,6 +76,9 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'reservation.refunded': ['Reservations', 'Reservation refunded'],
 	'reservation.payment_reminder': ['Reservations', 'Payment reminder'],
 	'reservation.cleared_through_band': ['Reservations', 'Cleared through a band'],
+	'reservation.door_code_assigned': ['Reservations', 'Door code assigned'],
+	'reservation.door_code_cleared': ['Reservations', 'Door code cleared'],
+	'reservation.door_code_failed': ['Reservations', 'Door code failed'],
 	'event.visibility_changed': ['Events and shows', 'Event visibility changed'],
 	'event.published_over_warnings': ['Events and shows', 'Event published over warnings'],
 	'event.emailed_beyond_visibility': ['Events and shows', 'Event emailed past its visibility'],
@@ -398,6 +401,16 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'reservation.cleared_through_band': {
 			const d = entry.details;
 			return `Booked ${slot(d)}, cleared through ${d.groupName}: ${d.bandmateName} holds the clearance`;
+		}
+		case 'reservation.door_code_assigned':
+			return `Door code assigned for the ${slot(entry.details)} reservation`;
+		case 'reservation.door_code_cleared': {
+			const why = entry.details.reason === 'ended' ? 'booking ended' : 'booking cancelled';
+			return `Door code cleared for the ${slot(entry.details)} reservation: ${why}`;
+		}
+		case 'reservation.door_code_failed': {
+			const what = entry.details.stage === 'issue' ? 'issue' : 'remove';
+			return `The lock refused to ${what} the door code for the ${slot(entry.details)} reservation`;
 		}
 		case 'clearance.granted': {
 			const d = entry.details;
