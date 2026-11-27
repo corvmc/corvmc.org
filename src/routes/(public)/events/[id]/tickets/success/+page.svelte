@@ -91,7 +91,7 @@
 			<CardBody class="space-y-3">
 				<CardTitle>{m.public_events_id_tickets_success_account_offer_title()}</CardTitle>
 				<p class="text-muted">
-					{m.public_events_id_tickets_success_account_offer_body({
+					{m.public_events_id_tickets_success_account_offer_text({
 						email: data.accountOffer.email
 					})}
 				</p>
