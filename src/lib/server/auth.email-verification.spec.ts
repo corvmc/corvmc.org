@@ -7,8 +7,8 @@ vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('#lib/server/directory/entry-service.js', () => ({ ensureUserEntry: vi.fn() }));
 vi.mock('#lib/server/user/member-number-service.js', () => ({ assignMemberNumber: vi.fn() }));
-vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
-	linkExistingSubscriberToUser: vi.fn()
+vi.mock('#lib/server/user/verified-email-claims.js', () => ({
+	claimVerifiedEmail: vi.fn()
 }));
 vi.mock('#lib/server/auth-emails.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('./auth-emails')>()),
@@ -17,8 +17,9 @@ vi.mock('#lib/server/auth-emails.js', async (importOriginal) => ({
 	sendPasswordChangedEmail: vi.fn()
 }));
 
+import { captureException } from '#lib/server/sentry.js';
 import { sendVerifyEmail, VERIFY_EMAIL_TOKEN_TTL_SECONDS } from './auth-emails';
-import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
+import { claimVerifiedEmail } from '#lib/server/user/verified-email-claims.js';
 import { emailVerificationConfig, onEmailVerified } from './auth';
 
 const verified = { id: 'user-1', email: 'alice@example.com' };
@@ -62,29 +63,30 @@ describe('email verification wiring', () => {
 });
 
 describe('onEmailVerified', () => {
-	it('claims the subscriber row once the link is clicked', async () => {
+	it('claims what is keyed by the address once the link is clicked', async () => {
 		await emailVerificationConfig.afterEmailVerification(verified);
 
-		expect(linkExistingSubscriberToUser).toHaveBeenCalledWith('user-1', 'alice@example.com');
+		expect(claimVerifiedEmail).toHaveBeenCalledWith('user-1', 'alice@example.com');
 	});
 
 	// A verification link is a signed JWT with no server-side single-use record,
 	// so it can be presented twice inside its TTL. Nothing may move on the
 	// second presentation, which is what makes the claim safe.
 	it('cannot be replayed into stealing a row a second account holds', async () => {
-		vi.mocked(linkExistingSubscriberToUser).mockResolvedValue(null);
+		vi.mocked(claimVerifiedEmail).mockResolvedValue(undefined);
 
 		await expect(onEmailVerified(verified)).resolves.toBeUndefined();
 
-		// The compare-and-swap in the service is the guard; the caller must not
-		// second-guess a null by writing the row some other way.
-		expect(linkExistingSubscriberToUser).toHaveBeenCalledTimes(1);
+		// The compare-and-swap in each link is the guard; the caller must not
+		// second-guess it by writing the record some other way.
+		expect(claimVerifiedEmail).toHaveBeenCalledTimes(1);
 	});
 
 	it('never lets a linking failure escape into the verification response', async () => {
-		vi.mocked(linkExistingSubscriberToUser).mockRejectedValueOnce(new Error('boom'));
+		vi.mocked(claimVerifiedEmail).mockRejectedValueOnce(new Error('boom'));
 
 		await expect(onEmailVerified(verified)).resolves.toBeUndefined();
+		expect(captureException).toHaveBeenCalledOnce();
 	});
 });
 

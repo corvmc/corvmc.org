@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { ticket, ticketSale, type TicketStatus } from '#lib/server/db/schema/ticket.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
+import { eq, and, inArray, isNull, lt, sql, asc, desc } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { emitTicketPurchased } from './purchased-event';
 import { captureException } from '#lib/server/sentry.js';
@@ -513,6 +513,25 @@ export async function getTicketsRemaining(eventId: string): Promise<number | nul
 
 	const sold = await getTicketsSold(eventId);
 	return Math.max(0, sale.quantity - sold);
+}
+
+/**
+ * Claim the guest tickets sitting under an address the user has verified (#3408).
+ *
+ * Case-insensitive, because ticket emails are stored as typed while `user.email`
+ * is lowercased. `user_id is null` makes it a compare-and-swap: a ticket that
+ * already belongs to a user never moves, and a replayed verification links
+ * nothing. Every status links; `getUserTickets` filters what shows. Returns
+ * how many tickets linked.
+ */
+export async function linkGuestTicketsToUser(userId: string, email: string): Promise<number> {
+	const normalized = email.toLowerCase().trim();
+	const linked = await db
+		.update(ticket)
+		.set({ userId, updatedAt: new Date() })
+		.where(and(sql`lower(${ticket.attendeeEmail}) = ${normalized}`, isNull(ticket.userId)))
+		.returning({ id: ticket.id });
+	return linked.length;
 }
 
 export async function getUserTickets(userId: string) {

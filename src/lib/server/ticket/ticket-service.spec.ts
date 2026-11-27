@@ -28,6 +28,7 @@ const {
 	getEventTickets,
 	getEventTicketMoney,
 	getUserTickets,
+	linkGuestTicketsToUser,
 	TicketNotFoundError,
 	TicketStateError
 } = await import('./ticket-service');
@@ -52,13 +53,14 @@ function ticket(
 		collective?: number;
 		feeCovered?: number;
 		name?: string;
+		email?: string;
 	} = {}
 ) {
 	sqlite
 		.prepare(
 			`insert into ticket (id, event_id, purchase_id, user_id, attendee_name, attendee_email, code, status,
 			   unit_price_cents, contribution_cents, acts_cents, collective_cents, fee_covered_cents, checked_in_at, created_at, updated_at)
-			 values (?, ?, ?, ?, ?, 'a@example.com', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			id,
@@ -66,6 +68,7 @@ function ticket(
 			opts.purchaseId ?? 'purchase-1',
 			opts.userId ?? null,
 			opts.name ?? 'Alice',
+			opts.email ?? 'a@example.com',
 			`CODE${String(++seq).padStart(4, '0')}`,
 			opts.status ?? 'valid',
 			opts.unit ?? 0,
@@ -470,6 +473,41 @@ describe('getUserTickets', () => {
 
 	it('returns empty array when user has no tickets', async () => {
 		expect(await getUserTickets('user-nonexistent')).toEqual([]);
+	});
+});
+
+describe('linkGuestTicketsToUser', () => {
+	const owner = (id: string) =>
+		(
+			sqlite.prepare('select user_id from ticket where id = ?').get(id) as {
+				user_id: string | null;
+			}
+		).user_id;
+
+	it('links guest tickets whatever the case or spacing of the address', async () => {
+		ticket('t1', { email: 'Alice@Example.com' });
+		ticket('t2', { email: 'alice@example.com', status: 'cancelled' });
+
+		expect(await linkGuestTicketsToUser('user-1', '  alice@example.com ')).toBe(2);
+		expect(owner('t1')).toBe('user-1');
+		expect(owner('t2')).toBe('user-1');
+	});
+
+	it('leaves a ticket another user holds and tickets under other addresses', async () => {
+		ticket('t1', { email: 'alice@example.com', userId: 'user-2' });
+		ticket('t2', { email: 'bob@example.com' });
+
+		expect(await linkGuestTicketsToUser('user-1', 'alice@example.com')).toBe(0);
+		expect(owner('t1')).toBe('user-2');
+		expect(owner('t2')).toBeNull();
+	});
+
+	it('links nothing on a second call', async () => {
+		ticket('t1', { email: 'alice@example.com' });
+
+		await linkGuestTicketsToUser('user-1', 'alice@example.com');
+		expect(await linkGuestTicketsToUser('user-3', 'alice@example.com')).toBe(0);
+		expect(owner('t1')).toBe('user-1');
 	});
 });
 

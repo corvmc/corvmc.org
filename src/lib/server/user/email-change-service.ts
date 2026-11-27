@@ -6,10 +6,8 @@ import { and, eq, gt } from 'drizzle-orm';
 import { DomainError } from '../domain-error';
 import { allowRateLimited } from '#lib/server/rate-limit.js';
 import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
-import {
-	linkExistingSubscriberToUser,
-	moveLinkedSubscriberEmail
-} from '#lib/server/marketing/subscriber-service.js';
+import { moveLinkedSubscriberEmail } from '#lib/server/marketing/subscriber-service.js';
+import { claimVerifiedEmail } from './verified-email-claims';
 import { captureException } from '#lib/server/sentry.js';
 import { stripe } from '#lib/server/stripe.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
@@ -283,11 +281,7 @@ export async function confirmEmailChange(token: string): Promise<ConfirmEmailCha
 	} catch (err) {
 		captureException(err);
 	}
-	try {
-		await linkExistingSubscriberToUser(found.userId, found.email);
-	} catch (err) {
-		captureException(err);
-	}
+	await claimVerifiedEmail(found.userId, found.email);
 	if (member.stripeId) {
 		try {
 			await stripe.customers.update(member.stripeId, { email: found.email });
