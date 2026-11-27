@@ -25,10 +25,13 @@ vi.mock('#lib/server/notification/dispatcher.js', () => ({
 	dispatchEmailOnly: (...a: unknown[]) => dispatchEmailOnly(...(a as []))
 }));
 
-const linkExistingSubscriberToUser = vi.fn(async () => null);
+const claimVerifiedEmail = vi.fn(async () => undefined);
+vi.mock('./verified-email-claims', () => ({
+	claimVerifiedEmail: (...a: unknown[]) => claimVerifiedEmail(...(a as []))
+}));
+
 const moveLinkedSubscriberEmail = vi.fn(async () => 'none');
 vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
-	linkExistingSubscriberToUser: (...a: unknown[]) => linkExistingSubscriberToUser(...(a as [])),
 	moveLinkedSubscriberEmail: (...a: unknown[]) => moveLinkedSubscriberEmail(...(a as []))
 }));
 
@@ -70,7 +73,7 @@ async function memberRow() {
 beforeEach(async () => {
 	allowRateLimited.mockReset().mockResolvedValue(true);
 	dispatchEmailOnly.mockClear();
-	linkExistingSubscriberToUser.mockClear();
+	claimVerifiedEmail.mockClear();
 	moveLinkedSubscriberEmail.mockReset().mockResolvedValue('none');
 	updateCustomer.mockReset().mockResolvedValue({});
 	recordAuditEntry.mockClear();
@@ -151,7 +154,7 @@ describe('confirmEmailChange', () => {
 		expect(dispatchEmailOnly).toHaveBeenLastCalledWith(
 			expect.objectContaining({ toEmail: 'jordan@exmaple.com' })
 		);
-		expect(linkExistingSubscriberToUser).toHaveBeenCalledWith(MEMBER, 'jordan@example.com');
+		expect(claimVerifiedEmail).toHaveBeenCalledWith(MEMBER, 'jordan@example.com');
 		expect(await svc.getPendingEmailChange(MEMBER)).toBeNull();
 	});
 

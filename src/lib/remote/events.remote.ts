@@ -117,6 +117,7 @@ import {
 	cancelTicket as cancelTicketService
 } from '#lib/server/ticket/ticket-service.js';
 import { doorListTickets } from '#lib/server/ticket/door-list.js';
+import { purchaseOwnerId } from '#lib/server/user/verified-email-claims.js';
 import {
 	getEventDoorTakings,
 	isOnTheDoor,
@@ -568,6 +569,12 @@ export const getTicketPurchaseSuccess = query(
 		const tickets = await getTicketsByPurchase(purchaseId);
 		if (tickets.length === 0) throw error(404, 'Purchase not found');
 
+		// Never looks the address up: the purchase id is the only credential here, and
+		// the viewer may not own the address, so the answer cannot depend on an account.
+		const { locals } = getRequestEvent();
+		const accountOffer =
+			!locals.user && tickets.every((t) => !t.userId) ? { email: tickets[0].attendeeEmail } : null;
+
 		return {
 			event: {
 				id: evt.id,
@@ -576,6 +583,7 @@ export const getTicketPurchaseSuccess = query(
 				endsAt: evt.endsAt,
 				doorsAt: evt.doorsAt ?? null
 			},
+			accountOffer,
 			tickets: tickets.map((t) => ({
 				id: t.id,
 				code: t.code,
@@ -1991,7 +1999,7 @@ export const claimFreeTicket = form(
 			eventId: evt.id,
 			purchaseId,
 			quantity: data.quantity,
-			userId: locals.user?.id ?? undefined,
+			userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email
 		});
@@ -2121,7 +2129,7 @@ export const purchaseTickets = form(
 				eventId: evt.id,
 				purchaseId: freeId,
 				quantity: data.quantity,
-				userId: locals.user?.id ?? undefined,
+				userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 				attendeeName: attendee.name,
 				attendeeEmail: attendee.email
 			});
@@ -2148,7 +2156,7 @@ export const purchaseTickets = form(
 			eventId: evt.id,
 			purchaseId,
 			quantity: data.quantity,
-			userId: locals.user?.id ?? undefined,
+			userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email,
 			status: 'pending',

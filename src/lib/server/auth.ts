@@ -16,7 +16,7 @@ import { impersonation } from '#lib/server/impersonation/impersonation-plugin.js
 import { captureException } from '#lib/server/sentry.js';
 import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
 import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
-import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
+import { claimVerifiedEmail } from '#lib/server/user/verified-email-claims.js';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { findBlockedEmail, recordRefusedSignup } from '#lib/server/moderation/blocklist-service.js';
 import { getByToken } from '#lib/server/group/group-invite-service.js';
@@ -456,17 +456,17 @@ export async function onUserCreated(created: {
 }
 
 /**
- * Claim the `subscriber` row already sitting under this address (#562).
+ * Claim what is keyed by this address: the `subscriber` row (#562) and the guest
+ * tickets bought under it (#3408).
  *
- * Runs on verification rather than at signup (#757): the row carries someone's
- * audience memberships and their suppression state, and until the link is
- * clicked, typing an address into the signup form proves nothing about who owns
- * it. `linkExistingSubscriberToUser` only writes an unclaimed row, so a replayed
- * verification cannot move a row a different account already holds.
+ * Runs on verification rather than at signup (#757): until the link is clicked,
+ * typing an address into the signup form proves nothing about who owns it.
+ * Each link only writes a record nobody holds, so a replayed verification
+ * cannot move one a different account already has.
  */
 export async function onEmailVerified(verified: { id: string; email: string }): Promise<void> {
 	try {
-		await linkExistingSubscriberToUser(verified.id, verified.email);
+		await claimVerifiedEmail(verified.id, verified.email);
 	} catch (err) {
 		captureException(err);
 	}

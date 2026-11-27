@@ -24,6 +24,11 @@ vi.mock('./dispatcher', () => ({
 
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
+const mockHasAccountForEmail = vi.fn(async (_email: string) => false);
+vi.mock('#lib/server/user/verified-email-claims.js', () => ({
+	hasAccountForEmail: (email: string) => mockHasAccountForEmail(email)
+}));
+
 const mockRoomBookedBefore = vi.fn(async (_rows: unknown) => new Map<string, Date>());
 vi.mock('#lib/server/reservation/room-booked-before.js', () => ({
 	roomBookedBefore: (rows: unknown) => mockRoomBookedBefore(rows)
@@ -422,6 +427,7 @@ describe('ticket.purchased handler (dedicated template)', () => {
 		eventTime: '8:00 PM',
 		ticketCodes: ['ABC123', 'DEF456'],
 		quantity: 2,
+		guestPurchase: false,
 		unitPriceCents: 2000,
 		subtotalCents: 4000,
 		feesCents: 120,
@@ -461,6 +467,46 @@ describe('ticket.purchased handler (dedicated template)', () => {
 			orderId: 'A1B2C3D4',
 			ticketsUrl:
 				'https://test.corvmc.com/events/event-1/tickets/success?purchase_id=a1b2c3d4-5678-90ab-cdef-000000000000'
+		});
+	});
+
+	describe('account offer', () => {
+		const guest = { ...purchase, guestPurchase: true };
+
+		beforeEach(() => mockHasAccountForEmail.mockReset().mockResolvedValue(false));
+
+		it('is offered to a guest purchase with no account under the address', async () => {
+			await emit('ticket.purchased', guest);
+
+			expect(mockHasAccountForEmail).toHaveBeenCalledWith('alice@test.com');
+			const model = ticketModel();
+			expect(model.accountOffered).toBe(true);
+			const url = new URL(model.signupUrl as string);
+			expect(url.origin).toBe('https://test.corvmc.com');
+			expect(url.pathname).toBe('/login');
+			expect(url.searchParams.get('email')).toBe('alice@test.com');
+		});
+
+		it('is withheld when an account holds the address', async () => {
+			mockHasAccountForEmail.mockResolvedValue(true);
+			await emit('ticket.purchased', guest);
+
+			expect(ticketModel()).toMatchObject({ accountOffered: false, signupUrl: '' });
+		});
+
+		it('is withheld, without a lookup, when the purchase belongs to a member', async () => {
+			await emit('ticket.purchased', { ...purchase, guestPurchase: false });
+
+			expect(mockHasAccountForEmail).not.toHaveBeenCalled();
+			expect(ticketModel().accountOffered).toBe(false);
+		});
+
+		it('still sends the receipt, without the offer, when the lookup throws', async () => {
+			mockHasAccountForEmail.mockRejectedValueOnce(new Error('d1 down'));
+			await emit('ticket.purchased', guest);
+
+			expect(mockDispatchEmailOnly).toHaveBeenCalledTimes(1);
+			expect(ticketModel().accountOffered).toBe(false);
 		});
 	});
 
