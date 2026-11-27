@@ -12,6 +12,7 @@ import { render } from '@cf-wasm/og/node';
 import type { SeedEvent } from './types';
 import { batchInsert, env } from './db';
 import { ptDate } from './util';
+import { sponsorPlacements } from './sponsor-placements';
 
 /** `YYYY-MM-DD` for a day relative to today, in Pacific time. */
 function day(offset: number): string {
@@ -105,32 +106,10 @@ export async function seedSponsors(events: SeedEvent[]) {
 	await fundingProjects('sponsorship', ships);
 	await batchInsert(sponsorship, ships);
 
-	const now = new Date();
-	const upcoming = events
-		.filter((e) => e.status === 'published' && e.startsAt > now)
-		.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-	// The month calendar poster credits next month's sponsors too.
-	const nextMonth = upcoming.find((e) => clubMonth(e.startsAt) !== clubMonth(now));
-	const place = (sponsorshipId: string, list: SeedEvent[], inCampaign = true) =>
-		list.map((e) => ({ sponsorshipId, eventId: e.id, onEventPage: true, inCampaign }));
-	const placements = [
-		...place('seed-sponsorship-troubadour-season', [
-			...upcoming.slice(0, 2),
-			...(nextMonth ? [nextMonth] : [])
-		]),
-		...place('seed-sponsorship-credit-union-pitch', upcoming.slice(2, 3), false),
-		...place('seed-sponsorship-brewery-series', [
-			...upcoming.slice(3, 4),
-			...(nextMonth ? [nextMonth] : [])
-		])
-	];
+	const placements = sponsorPlacements(events, new Date());
 	if (placements.length > 0) await batchInsert(sponsorPlacement, placements);
 	const logos = await seedSponsorLogos(sponsors.filter((s) => !s.archivedAt));
 	return { sponsors: sponsors.length, placements: placements.length, logos };
-}
-
-function clubMonth(d: Date): string {
-	return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).slice(0, 7);
 }
 
 const LOGO_COLORS = ['#003b5c', '#5a3d2b', '#00859b'];
