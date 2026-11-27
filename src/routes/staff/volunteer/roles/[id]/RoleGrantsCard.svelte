@@ -76,7 +76,7 @@
 		</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
-			{#each held as cap (cap)}
+			{#each held as cap, i (i)}
 				<li>
 					<span class="font-medium">{grantRuleFor(cap)?.label ?? cap}</span>
 					<span class="opacity-60">· {span(cap, role.grantLeadDays)}</span>

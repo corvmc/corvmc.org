@@ -6,6 +6,7 @@
 	import { imageSrc } from '#lib/utils/images.js';
 	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
 	import { initials } from '#lib/utils/format.js';
+	import { sliceTags, uniqueTags } from '#lib/utils/unique-tags.js';
 
 	interface Props {
 		href: ResolvedPathname;
@@ -43,8 +44,8 @@
 	const photo = $derived(imageSrc(image, 'avatar-lg'));
 
 	const MAX_TAGS = 3;
-	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
-	const shownGenres = $derived(genres.slice(0, MAX_TAGS));
+	const shownInstruments = $derived(sliceTags(uniqueTags(instruments), 0, MAX_TAGS));
+	const shownGenres = $derived(sliceTags(uniqueTags(genres), 0, MAX_TAGS));
 	const shownBands = $derived(bands.slice(0, MAX_TAGS));
 
 	const flags = $derived(

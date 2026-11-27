@@ -27,6 +27,18 @@ const component = (props: string, markup: string) => ({
 ${markup}`
 });
 
+// A derived value keeps the brand only when a function returns the alias.
+const derived = (script: string, markup: string) => ({
+	filename: `${import.meta.dirname}/case.svelte`,
+	code: `<script lang="ts">
+	type UniqueTags = readonly string[] & { readonly brand: true };
+	declare function sliceTags(tags: UniqueTags, start?: number, end?: number): UniqueTags;
+	let { list }: { list: UniqueTags } = $props();
+	${script}
+</script>
+${markup}`
+});
+
 tester.run('each-key-unique', rule as never, {
 	valid: [
 		component('UniqueTags', '{#each list as tag (tag)}{tag}{/each}'),
@@ -34,7 +46,11 @@ tester.run('each-key-unique', rule as never, {
 		component("readonly ('open' | 'closed')[]", '{#each list as s (s)}{s}{/each}'),
 		component('number[]', '{#each list as n (n)}{n}{/each}'),
 		component('{ id: string; name: string }[]', '{#each list as row (row.id)}{row.name}{/each}'),
-		component('{ id: string }[]', '{#each list as row (row)}{row.id}{/each}')
+		component('{ id: string }[]', '{#each list as row (row)}{row.id}{/each}'),
+		derived(
+			'const shown = $derived(sliceTags(list, 0, 3));',
+			'{#each shown as tag (tag)}{tag}{/each}'
+		)
 	],
 	invalid: [
 		{
@@ -47,6 +63,13 @@ tester.run('each-key-unique', rule as never, {
 		},
 		{
 			...component('UniqueTags', '{#each list.slice(1) as tag (tag)}{tag}{/each}'),
+			errors: [{ messageId: 'selfKeyed' }]
+		},
+		{
+			...derived(
+				'const shown = $derived(list.filter((tag) => tag !== "x"));',
+				'{#each shown as tag (tag)}{tag}{/each}'
+			),
 			errors: [{ messageId: 'selfKeyed' }]
 		}
 	]

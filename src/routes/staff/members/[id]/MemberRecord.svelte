@@ -112,7 +112,7 @@
 	{#if overview.membership.sustaining}
 		<Badge variant="success" size="md">{m.staff_sustaining_label()}</Badge>
 	{/if}
-	{#each member.roles as role (role)}
+	{#each member.roles as role, i (i)}
 		<Badge variant="info" size="md">{role}</Badge>
 	{/each}
 {/snippet}

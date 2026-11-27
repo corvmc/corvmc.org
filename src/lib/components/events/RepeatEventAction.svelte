@@ -78,7 +78,7 @@
 					<div class="text-sm">
 						<p class="font-medium">{m.events_repeat_event_next_occurrences_text()}</p>
 						<ul class="mt-1 opacity-70">
-							{#each preview.dates as iso (iso)}
+							{#each preview.dates as iso, i (i)}
 								<li>{formatOccurrence(iso)}</li>
 							{/each}
 						</ul>

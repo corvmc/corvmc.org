@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { parseTagList } from '#lib/utils/unique-tags.js';
+	import { parseTagList, uniqueTags } from '#lib/utils/unique-tags.js';
 	import { untrack } from 'svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
@@ -102,7 +102,7 @@
 	const tagList = $derived(parseTagList(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 	// The poster's tape already shows the primary tag.
-	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
+	const stickerTags = $derived(uniqueTags(tagList.filter((tag) => tag !== primaryTag)));
 
 	function refreshDetail() {
 		// The wrapper this page reads, not the two it is assembled from.

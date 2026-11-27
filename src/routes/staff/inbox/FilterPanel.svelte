@@ -88,7 +88,7 @@
 		<div class="flex flex-wrap gap-2">
 			<!-- Clicking the selected chip clears it: a facet with no "any" option
 			     is a filter you can enter and not leave. -->
-			{#each [...contactSubjects, 'other'] as key (key)}
+			{#each [...contactSubjects, 'other'] as key, i (i)}
 				{@const n = counts.subject[key] ?? 0}
 				<button
 					type="button"

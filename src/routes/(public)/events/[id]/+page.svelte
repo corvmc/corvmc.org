@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { parseTagList } from '#lib/utils/unique-tags.js';
+	import { parseTagList, uniqueTags } from '#lib/utils/unique-tags.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
@@ -60,7 +60,7 @@
 	const tagList = $derived(parseTagList(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 	// The poster's tape already shows the primary tag.
-	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
+	const stickerTags = $derived(uniqueTags(tagList.filter((tag) => tag !== primaryTag)));
 
 	// A cancelled show stays on the guide so the people who already had the date
 	// find out. Everything transactional comes off; the facts stay.

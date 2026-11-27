@@ -264,7 +264,7 @@
 						</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
-							{#each recurringPreview.dates as iso (iso)}
+							{#each recurringPreview.dates as iso, i (i)}
 								<li class="opacity-70">{formatPreviewDate(iso)}</li>
 							{/each}
 						</ul>

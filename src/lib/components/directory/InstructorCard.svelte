@@ -4,6 +4,7 @@
 	import { hashPattern } from '#lib/utils/patterns.js';
 	import { imageSrc } from '#lib/utils/images.js';
 	import { initials } from '#lib/utils/format.js';
+	import { sliceTags, uniqueTags } from '#lib/utils/unique-tags.js';
 	import { IconMail, IconPhone, IconExternalLink } from '@tabler/icons-svelte';
 
 	/**
@@ -57,7 +58,7 @@
 	const patternClass = $derived(`poster-gen--${hashPattern(name)}`);
 	const photo = $derived(imageSrc(image, 'avatar-lg'));
 	const MAX_TAGS = 4;
-	const shownInstruments = $derived(instruments.slice(0, MAX_TAGS));
+	const shownInstruments = $derived(sliceTags(uniqueTags(instruments), 0, MAX_TAGS));
 </script>
 
 <!-- `h-full` plus a growing spacer: the contact row is the one thing a visitor

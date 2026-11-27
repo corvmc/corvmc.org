@@ -103,7 +103,7 @@
 {#snippet warningsFor(result: Result)}
 	{#if result?.conflict && result.warnings?.length}
 		<ul class="list-disc space-y-1 pl-5 text-sm text-warning">
-			{#each result.warnings as warning (warning)}
+			{#each result.warnings as warning, i (i)}
 				<li>{warning}</li>
 			{/each}
 		</ul>

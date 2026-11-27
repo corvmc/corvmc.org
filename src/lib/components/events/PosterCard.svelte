@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { parseTagList } from '#lib/utils/unique-tags.js';
+	import { parseTagList, uniqueTags } from '#lib/utils/unique-tags.js';
 	import type { ResolvedPathname } from '$app/types';
 	import { formatDate, formatTime } from '#lib/utils/format.js';
 	import { priceDisplay } from '#lib/utils/event-ticketing.js';
@@ -57,7 +57,7 @@
 	const tagList = $derived(parseTagList(tags));
 	// Everything the tape is not already showing. The tape carries one tag; the
 	// badges carry the rest, rather than the row vanishing whole (#1041).
-	const badgeTags = $derived(tagList.filter((t) => t !== tapeLabel));
+	const badgeTags = $derived(uniqueTags(tagList.filter((t) => t !== tapeLabel)));
 
 	const poster = $derived(imageSrc(posterUrl, 'poster'));
 

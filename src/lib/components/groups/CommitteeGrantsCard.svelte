@@ -21,7 +21,7 @@
 		<p class="text-muted">{m.groups_committee_grants_card_members_committee_hold_nothing_text()}</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
-			{#each held as cap (cap)}
+			{#each held as cap, i (i)}
 				<li>
 					<span class="font-medium">{grantRuleFor(cap)?.label ?? cap}</span>
 					<span class="opacity-60">· {committeeReach(cap)}</span>
