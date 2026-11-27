@@ -117,6 +117,7 @@ import {
 	cancelTicket as cancelTicketService
 } from '#lib/server/ticket/ticket-service.js';
 import { doorListTickets } from '#lib/server/ticket/door-list.js';
+import { purchaseOwnerId } from '#lib/server/user/verified-email-claims.js';
 import {
 	getEventDoorTakings,
 	isOnTheDoor,
@@ -1991,7 +1992,7 @@ export const claimFreeTicket = form(
 			eventId: evt.id,
 			purchaseId,
 			quantity: data.quantity,
-			userId: locals.user?.id ?? undefined,
+			userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email
 		});
@@ -2121,7 +2122,7 @@ export const purchaseTickets = form(
 				eventId: evt.id,
 				purchaseId: freeId,
 				quantity: data.quantity,
-				userId: locals.user?.id ?? undefined,
+				userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 				attendeeName: attendee.name,
 				attendeeEmail: attendee.email
 			});
@@ -2148,7 +2149,7 @@ export const purchaseTickets = form(
 			eventId: evt.id,
 			purchaseId,
 			quantity: data.quantity,
-			userId: locals.user?.id ?? undefined,
+			userId: await purchaseOwnerId(locals.user?.id, attendee.email),
 			attendeeName: attendee.name,
 			attendeeEmail: attendee.email,
 			status: 'pending',
