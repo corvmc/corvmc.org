@@ -92,10 +92,11 @@ export interface DispatchParams {
 	data?: Record<string, unknown>;
 	/**
 	 * When the thing the notice is about happens. A `digestIfLater` type is held
-	 * for the daily digest only when this is more than 24 hours away; absent, it
-	 * is delivered at once.
+	 * for the daily digest only when this is more than 24 hours away; absent or
+	 * `null`, it is delivered at once. `null` is the caller saying it has no time;
+	 * `digest-happens-at.spec.ts` fails a `digestIfLater` call that says nothing.
 	 */
-	happensAt?: Date;
+	happensAt?: Date | null;
 	/** What the email says. Absent, no email is sent whatever the preference. */
 	email?: NotificationEmailContent;
 	/** Override: send email even if no userId (e.g., ticket buyer without account) */
@@ -276,7 +277,7 @@ export async function dispatchBatch(params: {
 	href?: string;
 	data?: Record<string, unknown>;
 	/** As on `DispatchParams`. */
-	happensAt?: Date;
+	happensAt?: Date | null;
 	/** Shared by every recipient; the greeting is added per member. */
 	email?: Omit<NotificationEmailContent, 'recipientName'>;
 }): Promise<void> {

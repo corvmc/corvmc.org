@@ -328,6 +328,12 @@ every type. Not a registry entry, because the registry dispatches once per membe
 are written directly. Not `readAt` set at write time, because that would count unseen notices as
 read. Announcement and ballot fan-outs insert rows directly and stay immediate.
 
+Every `dispatch` of a `digestIfLater` type passes `happensAt`: a `Date`, or `null` for a subject
+with no time, and `notification/digest-happens-at.spec.ts` fails a call that says neither. Not a
+default of "immediate", because a forgotten time reads the same as a deliberate one. `null` is
+passed today by `band_event_unpublished`, `community_event_reviewed` and
+`community_event_unpublished`, whose payloads carry no start; they stay immediate.
+
 **Failure mode to understand:** this is an in-process event emitter, not a queue. Listeners
 run best-effort inside the same request; there is no persistence, retry, or dead-letter. If
 a listener throws or the isolate dies mid-listener, that side effect is lost. The one place

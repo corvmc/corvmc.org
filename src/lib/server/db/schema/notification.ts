@@ -885,7 +885,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
  */
 export function holdsForDigest(
 	type: string,
-	happensAt: Date | undefined,
+	happensAt: Date | null | undefined,
 	now: Date = new Date()
 ): boolean {
 	const delivery = getNotificationType(type)?.inAppDelivery;

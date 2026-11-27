@@ -236,6 +236,8 @@ export interface EventCancelledEvent {
 	eventId: string;
 	eventTitle: string;
 	eventDate: string;
+	/** ISO string, like every other date on this bus. */
+	startsAt: string;
 	/** Ticket holders to notify */
 	ticketHolders: Array<{
 		attendeeName: string;
