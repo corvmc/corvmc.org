@@ -1,7 +1,7 @@
 // The real stylesheet, because two of the defects below are classes that emit
 // no CSS at all — a shape `pnpm check`, ESLint and the DOM are all blind to.
 import '../../../routes/layout.css';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { ChromeNotification } from './chrome';
 
@@ -18,9 +18,22 @@ vi.mock('$app/navigation', () => ({
 }));
 
 class FakeEventSource {
+	static instances: FakeEventSource[] = [];
 	onerror: ((this: EventSource, ev: Event) => void) | null = null;
-	addEventListener() {}
-	close() {}
+	closed = false;
+	listeners: Record<string, (e: MessageEvent) => void> = {};
+	constructor() {
+		FakeEventSource.instances.push(this);
+	}
+	addEventListener(type: string, fn: (e: MessageEvent) => void) {
+		this.listeners[type] = fn;
+	}
+	close() {
+		this.closed = true;
+	}
+	emit(type: string, data: unknown) {
+		this.listeners[type]?.({ data: JSON.stringify(data) } as MessageEvent);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -32,6 +45,7 @@ class FakeEventSource {
 // paid once, during file evaluation — not inside a test or hook, where it would
 // race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
 const NotificationBell = (await import('./NotificationBell.svelte')).default;
+const { refreshAll } = await import('$app/navigation');
 
 // The dropdown is the wrapper's only other direct child. `.notification-bell-wrapper`
 // is load-bearing markup — the click-outside handler keys off it — so this asks
@@ -40,6 +54,7 @@ const dropdown = () => document.querySelector('.notification-bell-wrapper > div'
 
 describe('NotificationBell', () => {
 	beforeEach(() => {
+		FakeEventSource.instances = [];
 		vi.stubGlobal('EventSource', FakeEventSource);
 	});
 
@@ -89,6 +104,63 @@ describe('NotificationBell', () => {
 		}
 
 		expect(uncaught).toEqual([]);
+	});
+});
+
+/**
+ * The stream is a long-lived connection; a background tab holding one is the
+ * class (#3409). The server's push map is per isolate, so `init` carries the
+ * count that reconciles whatever a closed stream missed.
+ */
+describe('NotificationBell stream', () => {
+	function setVisibility(state: 'visible' | 'hidden') {
+		Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+		document.dispatchEvent(new Event('visibilitychange'));
+	}
+
+	beforeEach(() => {
+		FakeEventSource.instances = [];
+		vi.mocked(refreshAll).mockClear();
+		vi.stubGlobal('EventSource', FakeEventSource);
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		Reflect.deleteProperty(document, 'visibilityState');
+	});
+
+	it('opens no stream when mounted in a hidden tab', async () => {
+		Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		await render(NotificationBell, { notifications: [], unreadCount: 0 });
+		vi.advanceTimersByTime(1000);
+		expect(FakeEventSource.instances).toHaveLength(0);
+	});
+
+	it('closes the stream when the tab is hidden and opens a new one when visible', async () => {
+		await render(NotificationBell, { notifications: [], unreadCount: 0 });
+		await vi.waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+		const [first] = FakeEventSource.instances;
+
+		setVisibility('hidden');
+		expect(first.closed).toBe(true);
+		expect(FakeEventSource.instances).toHaveLength(1);
+
+		setVisibility('visible');
+		expect(FakeEventSource.instances).toHaveLength(2);
+		expect(FakeEventSource.instances[1].closed).toBe(false);
+	});
+
+	it('refreshes on init only when the server count differs from the page', async () => {
+		await render(NotificationBell, { notifications: [], unreadCount: 3 });
+		await vi.waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+		const [stream] = FakeEventSource.instances;
+
+		stream.emit('init', { unreadCount: 3 });
+		expect(refreshAll).not.toHaveBeenCalled();
+
+		stream.emit('init', { unreadCount: 4 });
+		expect(refreshAll).toHaveBeenCalledOnce();
 	});
 });
 

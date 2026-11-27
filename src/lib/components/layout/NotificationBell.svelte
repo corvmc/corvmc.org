@@ -45,8 +45,16 @@
 
 		eventSource = new EventSource('/api/notifications/stream');
 
-		eventSource.addEventListener('init', () => {
+		// A push from another isolate (cron, webhook) never reaches this stream, so
+		// the count on (re)connect is the only sign one was missed.
+		eventSource.addEventListener('init', (e) => {
 			retryCount = 0;
+			try {
+				const { unreadCount: serverCount } = JSON.parse((e as MessageEvent).data);
+				if (serverCount !== unreadCount) refreshAll();
+			} catch {
+				/* malformed init: keep what the page has */
+			}
 		});
 
 		eventSource.addEventListener('message', () => {
@@ -66,17 +74,32 @@
 		closeEventSource();
 	}
 
+	// A hidden tab holds no stream; it reopens on return, and `init` reconciles.
+	function handleVisibilityChange() {
+		clearPendingTimeout();
+		if (document.visibilityState === 'visible') {
+			retryCount = 0;
+			connect();
+		} else {
+			closeEventSource();
+		}
+	}
+
 	onMount(() => {
 		if (!browser) return;
-		pendingTimeout = setTimeout(connect, 100);
+		if (document.visibilityState === 'visible') pendingTimeout = setTimeout(connect, 100);
 		window.addEventListener('beforeunload', handleBeforeUnload);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
 	});
 
 	onDestroy(() => {
 		destroyed = true;
 		clearPendingTimeout();
 		closeEventSource();
-		if (browser) window.removeEventListener('beforeunload', handleBeforeUnload);
+		if (browser) {
+			window.removeEventListener('beforeunload', handleBeforeUnload);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		}
 	});
 
 	function toggleDropdown() {
@@ -181,8 +204,8 @@
 											     primary from the panel, and `sr-only` carries it into the
 											     accessibility tree, where 28 rows read identically. -->
 											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
-												{#if isUnread}<span class="sr-only"
-														>{m.layout_notification_unread_text()}
+												{#if isUnread}<span class="sr-only">
+														{m.layout_notification_unread_text()}
 													</span>{/if}{n.title}
 											</p>
 											{#if n.body}
