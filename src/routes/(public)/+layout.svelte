@@ -4,9 +4,12 @@
 	import SiteFooter from '#lib/components/public/layout/SiteFooter.svelte';
 	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import SignedInProvider from '#lib/components/ui/SignedInProvider.svelte';
+	import * as publicEnv from '$app/env/public';
 	import { getMe } from '#lib/remote/layout.remote.js';
 
 	let { children } = $props();
+
+	const ogImage = new URL('/og-image.png', publicEnv.PUBLIC_SITE_URL || 'https://corvmc.org').href;
 
 	let user = $derived(await getMe());
 </script>
@@ -14,7 +17,7 @@
 <svelte:head>
 	<meta property="og:site_name" content="Corvallis Music Collective" />
 	<meta property="og:type" content="website" />
-	<meta property="og:image" content="/og-image.png" />
+	<meta property="og:image" content={ogImage} />
 	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 

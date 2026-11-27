@@ -14,6 +14,7 @@ export const permanentRedirectSources: readonly string[] = [
 	'/member/events/submit',
 	'/member/volunteer/committees',
 	'/member/volunteer/hours',
+	'/register',
 	'/staff/access',
 	'/staff/audit',
 	'/staff/bands',
