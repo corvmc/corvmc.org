@@ -136,7 +136,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
  *
  * A subdomain no band currently holds may still be one a band released by
  * changing its address, in which case it forwards to wherever that band lives
- * now — until somebody else claims it.
+ * now — until somebody else claims it. Otherwise it is a bare 404.
  */
 const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 	const slug = bandSlugFromHost(event.url.hostname, publicEnv.PUBLIC_SITE_URL);
@@ -162,21 +162,21 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
 			);
 			return new Response(null, { status: 302, headers: { location: target.href } });
 		}
+		// Nobody holds it and nobody released it: answer 404 without rendering,
+		// since any single-label host reaches this hook.
+		return new Response(null, { status: 404 });
 	}
 
-	// Free tier, unknown slug, or the feature switched off — send them to the
-	// public page for whatever holds the address. Band-site subpaths (/events,
-	// /epk) have no directory equivalent, so everything lands on the page itself.
+	// Free tier or the feature switched off — send them to the public page for
+	// the group holding the address. Band-site subpaths (/events, /epk) have no
+	// directory equivalent, so everything lands on the page itself.
 	//
 	// Routed on `kind` because the slug lookup does not filter by one: clubs and
-	// committees share the `group` table, so a club's subdomain used to be sent
-	// to /directory/bands/{slug}, a lookup that requires kind 'band' and
-	// therefore 404s. An unknown slug has no kind at all and is treated as a
-	// band — a band directory 404 is the closest thing to the truth there.
+	// committees share the `group` table, and a club's page is /groups/{slug}.
 	const siteUrl = publicEnv.PUBLIC_SITE_URL || 'https://corvmc.org';
 	return new Response(null, {
 		status: 302,
-		headers: { location: new URL(groupPublicPath(host?.kind ?? 'band', slug), siteUrl).href }
+		headers: { location: new URL(groupPublicPath(host.kind, slug), siteUrl).href }
 	});
 };
 
