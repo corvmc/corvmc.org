@@ -21,6 +21,11 @@ reminders, and band invitations. You control how you hear about each type.
    or both.
 4. Changes save as you make them.
 
+Some in-app notices, such as receipts and task updates, arrive together in a
+daily summary in the bell, from 9am. Notices about something happening within a
+day, such as door codes and reminders, arrive straight away. Email is not
+affected.
+
 Turning everything off for a type means you won't be reminded about it — keep
 reservation and payment notifications on if you want booking reminders.
 

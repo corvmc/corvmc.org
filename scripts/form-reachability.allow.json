@@ -128,7 +128,8 @@
 	"src/lib/server/notification/dispatcher.ts#dispatch(0)": {
 		"data": "internal: listeners attach notification data",
 		"email": "internal: listeners supply declared email content",
-		"forceEmail": "internal: listeners override a member's email preference for mandatory mail"
+		"forceEmail": "internal: listeners override a member's email preference for mandatory mail",
+		"happensAt": "internal: listeners pass the event time for digestIfLater types"
 	},
 	"src/lib/server/notification/dispatcher.ts#dispatchEmailOnly(0)": {
 		"model": "internal: the template branch of the union, used by listeners and auth mail",

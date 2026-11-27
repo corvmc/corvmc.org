@@ -1583,6 +1583,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 				eventId,
 				eventTitle: existing.title,
 				eventDate: formatDateFull(existing.startsAt, DEFAULT_TIMEZONE),
+				startsAt: existing.startsAt.toISOString(),
 				ticketHolders: holders.map((h) => ({
 					attendeeName: h.attendeeName,
 					attendeeEmail: h.attendeeEmail,

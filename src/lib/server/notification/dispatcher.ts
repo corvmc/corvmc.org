@@ -2,7 +2,11 @@ import { queueEmail, queueEmails } from '#lib/server/outbox/outbox-service.js';
 import type { TemplatedEmail } from './email/postmark-client';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
-import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
+import {
+	HELD_FOR_DIGEST,
+	NOTIFICATION_TYPES,
+	holdsForDigest
+} from '#lib/server/db/schema/notification.js';
 import { NOTIFICATION_CATEGORIES } from '#lib/email/notification-category.js';
 import { createNotification, createNotifications } from './in-app-service';
 import { getPreference } from './preference-service';
@@ -86,6 +90,13 @@ export interface DispatchParams {
 	body?: string;
 	href?: string;
 	data?: Record<string, unknown>;
+	/**
+	 * When the thing the notice is about happens. A `digestIfLater` type is held
+	 * for the daily digest only when this is more than 24 hours away; absent or
+	 * `null`, it is delivered at once. `null` is the caller saying it has no time;
+	 * `digest-happens-at.spec.ts` fails a `digestIfLater` call that says nothing.
+	 */
+	happensAt?: Date | null;
 	/** What the email says. Absent, no email is sent whatever the preference. */
 	email?: NotificationEmailContent;
 	/** Override: send email even if no userId (e.g., ticket buyer without account) */
@@ -128,24 +139,28 @@ export async function dispatch(params: DispatchParams): Promise<DispatchOutcome>
 	// In-app notification
 	if (pref.inApp) {
 		try {
+			// A held row is stored but not pushed or shown: the daily digest lists it.
+			const held = holdsForDigest(params.type, params.happensAt);
 			const row = await createNotification({
 				userId: params.userId,
 				type: params.type,
 				title: params.title,
 				body: params.body,
 				href: params.href,
-				data: params.data
+				data: held ? { ...params.data, [HELD_FOR_DIGEST]: true } : params.data
 			});
 
 			// Push via SSE for real-time delivery
-			pushToUser(params.userId, {
-				id: row.id,
-				type: row.type,
-				title: row.title,
-				body: row.body,
-				href: row.href,
-				createdAt: row.createdAt.toISOString()
-			});
+			if (!held) {
+				pushToUser(params.userId, {
+					id: row.id,
+					type: row.type,
+					title: row.title,
+					body: row.body,
+					href: row.href,
+					createdAt: row.createdAt.toISOString()
+				});
+			}
 		} catch (err) {
 			captureException(err, { channel: 'in-app', type: params.type, userId: params.userId });
 		}
@@ -261,6 +276,8 @@ export async function dispatchBatch(params: {
 	body?: string;
 	href?: string;
 	data?: Record<string, unknown>;
+	/** As on `DispatchParams`. */
+	happensAt?: Date | null;
 	/** Shared by every recipient; the greeting is added per member. */
 	email?: Omit<NotificationEmailContent, 'recipientName'>;
 }): Promise<void> {
@@ -270,6 +287,7 @@ export async function dispatchBatch(params: {
 	const inApp = recipients.filter((r) => r.inAppEnabled);
 	if (inApp.length > 0) {
 		try {
+			const held = holdsForDigest(params.type, params.happensAt);
 			await createNotifications(
 				inApp.map((r) => ({
 					userId: r.userId,
@@ -277,12 +295,12 @@ export async function dispatchBatch(params: {
 					title: params.title,
 					body: params.body,
 					href: params.href,
-					data: params.data
+					data: held ? { ...params.data, [HELD_FOR_DIGEST]: true } : params.data
 				}))
 			);
 			// The rows carry no ids back; the bell re-fetches on any message.
 			const createdAt = new Date().toISOString();
-			for (const r of inApp) {
+			for (const r of held ? [] : inApp) {
 				pushToUser(r.userId, {
 					id: `${params.type}:${r.userId}`,
 					type: params.type,

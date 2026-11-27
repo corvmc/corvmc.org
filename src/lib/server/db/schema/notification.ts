@@ -19,11 +19,32 @@ import type { Capability } from '../../../config';
 export type NotificationCategoryKey =
 	'practice-space' | 'shows' | 'membership' | 'people' | 'volunteering';
 
+export type InAppDelivery = 'immediate' | 'digest' | 'digestIfLater';
+
+export const DIGEST_HOLD_MS = 24 * 60 * 60 * 1000;
+
+/** The `data` key that marks an in-app row as held for the daily digest. */
+export const HELD_FOR_DIGEST = 'heldForDigest';
+
+/** The type of the summary row the daily digest writes. */
+export const DIGEST_TYPE = 'notification_digest';
+
 export interface NotificationTypeDef {
 	key: string;
 	label: string;
 	/** Required, so a new type cannot ship without picking a bucket. */
 	category: NotificationCategoryKey;
+	/**
+	 * How the in-app notice reaches the bell. Required, so a new type cannot
+	 * ship without picking one (#3409). Email is unaffected by it.
+	 *
+	 * - `immediate`: written and pushed at once. Anything time-critical, a
+	 *   conversation, an expiring offer, or a notice nobody else will act on.
+	 * - `digest`: held and delivered in the member's daily summary.
+	 * - `digestIfLater`: held only when the thing it is about is more than 24 h
+	 *   away; with no `happensAt` it is immediate, so it fails toward early.
+	 */
+	inAppDelivery: InAppDelivery;
 	description: string;
 	defaults: {
 		email: boolean;
@@ -63,6 +84,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'audio_purchase_receipt',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Music purchase receipt',
 		description: 'Your download link and receipt after buying a release',
 		defaults: { email: true, inApp: true, sms: false },
@@ -81,6 +103,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'membership_receipt',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Membership receipt',
 		description: 'Your receipt when you start a sustaining contribution',
 		defaults: { email: true, inApp: true, sms: false },
@@ -89,6 +112,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'membership_renewal_receipt',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Monthly contribution receipt',
 		description: 'A receipt each month your contribution renews',
 		defaults: { email: true, inApp: true, sms: false }
@@ -96,6 +120,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'membership_payment_failed',
 		category: 'membership',
+		inAppDelivery: 'immediate',
 		label: 'Contribution payment failed',
 		description: 'When a card is declined and your membership needs attention',
 		defaults: { email: true, inApp: true, sms: false },
@@ -107,6 +132,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'membership_cancellation_scheduled',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Membership cancellation scheduled',
 		description: 'Confirmation of when your membership will end after you cancel',
 		defaults: { email: true, inApp: true, sms: false }
@@ -114,6 +140,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'membership_ended',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Membership ended',
 		description: 'When your contribution ends and your member credits reset',
 		defaults: { email: true, inApp: true, sms: false },
@@ -122,6 +149,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'ticket_confirmation',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Ticket purchase confirmation',
 		description: 'Confirmation email with your ticket codes after purchase',
 		defaults: { email: true, inApp: true, sms: false },
@@ -130,6 +158,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'event_cancellation',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Event cancellation',
 		description: 'Notification when an event you have tickets for is cancelled',
 		defaults: { email: true, inApp: true, sms: false },
@@ -138,6 +167,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'check_in_reminder',
 		category: 'shows',
+		inAppDelivery: 'immediate',
 		label: 'Event check-in reminder',
 		description: 'Reminder before an event with your ticket code',
 		defaults: { email: true, inApp: true, sms: false }
@@ -145,6 +175,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'reservation_reminder',
 		category: 'practice-space',
+		inAppDelivery: 'immediate',
 		label: 'Reservation reminder',
 		description: 'Reminder about upcoming reservations',
 		defaults: { email: true, inApp: true, sms: false }
@@ -152,6 +183,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'door_code_ready',
 		category: 'practice-space',
+		inAppDelivery: 'immediate',
 		label: 'Door code ready',
 		description: 'Your door code, once the lock has confirmed it',
 		defaults: { email: true, inApp: true, sms: false },
@@ -161,6 +193,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'reservation_payment_due',
 		category: 'practice-space',
+		inAppDelivery: 'digest',
 		label: 'Payment due',
 		description: 'Reminder 1, 7 and 21 days after a reservation ends unpaid',
 		defaults: { email: true, inApp: true, sms: false },
@@ -170,6 +203,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'band_invitation',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Band invitation',
 		description: 'Notification when someone invites you to their band',
 		defaults: { email: true, inApp: true, sms: false }
@@ -177,6 +211,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'band_invitation_accepted',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Band invitation accepted',
 		description: 'Notification when someone accepts your band invitation',
 		defaults: { email: true, inApp: true, sms: false }
@@ -184,6 +219,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'group_member_added',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Added to a club or committee',
 		description: 'When staff add you to a club or committee roster',
 		defaults: { email: true, inApp: true, sms: false }
@@ -191,6 +227,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'group_application_submitted',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Group application',
 		description: 'When someone applies to join a club or committee you run',
 		// Not staff-only: a chair is a member. Email on, because the applicant is
@@ -200,6 +237,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'band_enquiry_received',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Booking enquiry',
 		description: 'Notification when someone contacts one of your bands through its booking form',
 		defaults: { email: true, inApp: true, sms: false }
@@ -207,6 +245,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'recurring_skipped',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Recurring reservation skipped',
 		description: 'Notification when a recurring reservation is skipped due to a conflict',
 		defaults: { email: true, inApp: true, sms: false }
@@ -214,6 +253,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'event_recurring_reservation_skipped',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Recurring event could not reserve space',
 		description:
 			'Notification when a generated recurring event could not reserve the practice space due to a conflict',
@@ -223,6 +263,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'recurring_rescheduled',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Recurring reservation changed',
 		description: 'When staff change the day, time or frequency of your recurring reservation',
 		defaults: { email: true, inApp: true, sms: false }
@@ -230,6 +271,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'recurring_waitlisted',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Recurring reservation waitlisted',
 		description:
 			'Notification when a recurring reservation instance is waitlisted due to a conflict',
@@ -238,6 +280,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'waitlist_slot_available',
 		category: 'practice-space',
+		inAppDelivery: 'immediate',
 		label: 'Waitlist slot available',
 		description:
 			'Notification when a waitlisted reservation slot becomes available for confirmation',
@@ -247,6 +290,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'waitlist_expired',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Waitlist expired',
 		description: 'Notification when a waitlisted reservation expires without confirmation',
 		defaults: { email: true, inApp: true, sms: false }
@@ -254,6 +298,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_loan_scheduled',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Equipment loan confirmed',
 		description: 'Notification when staff confirms your equipment pickup',
 		defaults: { email: true, inApp: true, sms: false }
@@ -261,6 +306,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_loan_requested',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Equipment loan requested',
 		description: 'Notification when a member requests equipment',
 		defaults: { email: true, inApp: true, sms: false },
@@ -269,6 +315,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_checked_out',
 		category: 'practice-space',
+		inAppDelivery: 'digest',
 		label: 'Equipment checked out',
 		description: 'Confirmation when you check out equipment',
 		defaults: { email: true, inApp: true, sms: false }
@@ -276,6 +323,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_loan_due',
 		category: 'practice-space',
+		inAppDelivery: 'immediate',
 		label: 'Equipment due back',
 		description: 'Reminder the day before a loan is due, and again while it is late',
 		defaults: { email: true, inApp: true, sms: false }
@@ -283,6 +331,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'development_deadline',
 		category: 'membership',
+		inAppDelivery: 'digest',
 		label: 'Grant or sponsorship deadline',
 		description: 'Two weeks and three days before a grant or sponsorship deadline you manage',
 		defaults: { email: true, inApp: true, sms: false },
@@ -291,6 +340,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_returned',
 		category: 'practice-space',
+		inAppDelivery: 'digest',
 		label: 'Equipment returned',
 		description: 'Summary when your equipment return is recorded',
 		defaults: { email: true, inApp: true, sms: false }
@@ -298,6 +348,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'equipment_report_resolved',
 		category: 'practice-space',
+		inAppDelivery: 'digest',
 		label: 'Something you reported was fixed',
 		// Email on: the reporter is rarely looking at the unit's page, and hearing
 		// back is what makes the next report worth filing.
@@ -307,6 +358,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'reservation_confirmed',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Reservation confirmed',
 		description: 'Your confirmation when a booking is locked in',
 		defaults: { email: true, inApp: true, sms: false }
@@ -317,6 +369,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'reservation_cancelled',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Reservation cancelled',
 		description: 'Notification when your reservation is cancelled by staff',
 		defaults: { email: true, inApp: true, sms: false }
@@ -324,6 +377,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'contact_form',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Contact form submission',
 		description: 'Forwarded contact form messages',
 		defaults: { email: true, inApp: false, sms: false },
@@ -333,6 +387,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'inbox_message_received',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'New inbox message',
 		description: 'Notification when a new message arrives in the staff inbox',
 		defaults: { email: false, inApp: true, sms: false },
@@ -341,6 +396,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'portal_message_reply',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Reply to your message',
 		description: 'Notification when staff reply to a conversation you started from your portal',
 		// Email defaults on: they asked a question and may not come back to the
@@ -350,6 +406,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'instructor_application_submitted',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Teaching application',
 		description: 'When a member applies to teach at the Collective',
 		// Staff-facing. Email on, because an application nobody looks at is a
@@ -359,6 +416,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'instructor_application_reviewed',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Your teaching application',
 		description: 'When staff approve your application to teach, or send it back for a change',
 		// Email on, and this is the one that matters: a return state nobody
@@ -369,6 +427,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'instructor_status_ended',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Your teaching status',
 		description: 'When staff pause or end your teaching',
 		// Email on: a teacher with students booked would otherwise find out by looking.
@@ -377,6 +436,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'direct_message_request',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'New message request',
 		description: 'When another member asks to start a conversation with you',
 		// Emails, but names neither the sender nor what they wrote — "you have a
@@ -389,6 +449,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'group_chat_message',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Your groups’ chat',
 		description: 'When somebody posts in a band or club you are in',
 		// In-app only by default. A chat is the highest-frequency thing on the
@@ -400,6 +461,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'direct_message_received',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'New direct message',
 		description: 'When a member you are talking with sends a message',
 		// Names the sender — you accepted them — but still never the message.
@@ -409,6 +471,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'messaging_restricted',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Messaging restricted',
 		description: 'When staff limit your ability to start new conversations',
 		// This one emails freely: it is CorvMC telling a member about a decision
@@ -418,6 +481,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'inbox_assigned',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Inbox conversation assigned',
 		description: 'Notification when a staff inbox conversation is assigned to you',
 		defaults: { email: false, inApp: true, sms: false },
@@ -426,6 +490,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'content_flagged',
 		category: 'volunteering',
+		inAppDelivery: 'immediate',
 		label: 'Content flagged',
 		description: 'Notification when a member reports a profile for review',
 		defaults: { email: false, inApp: true, sms: false },
@@ -434,6 +499,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'band_lineup_invited',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Added to a bill',
 		description: 'Notification when another band lists yours on the lineup for their show',
 		defaults: { email: true, inApp: true, sms: false }
@@ -441,6 +507,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'radio_attestation_expiring',
 		category: 'shows',
+		inAppDelivery: 'digest',
 		label: 'Radio attestation expiring',
 		description: 'A month and a week before a release’s yearly CMC Radio attestation runs out',
 		defaults: { email: true, inApp: true, sms: false }
@@ -448,6 +515,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'production_cancelled',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Show cancelled',
 		description:
 			'When a show your committee still owes something on is cancelled, what was called off, and by whom',
@@ -456,6 +524,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'deliverable_due',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Show work due',
 		description:
 			'Three days before one of your committee’s items on a show is due, and again once it is late',
@@ -464,6 +533,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'task_assigned',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Task assigned',
 		description: 'When somebody assigns you a task',
 		defaults: { email: true, inApp: true, sms: false }
@@ -471,6 +541,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'task_ready',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Task ready',
 		description: 'When the last task one of your tasks waits on is done',
 		defaults: { email: false, inApp: true, sms: false }
@@ -478,6 +549,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'band_event_unpublished',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Event unlisted by staff',
 		description: 'Notification when staff unpublish one of your band’s events after a report',
 		defaults: { email: true, inApp: true, sms: false }
@@ -485,6 +557,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_hours_submitted',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Volunteer hours submitted',
 		// In-app only, like the inbox and content-flag queues. A log every few
 		// days is routine queue work; emailing every staffer would train them to
@@ -496,6 +569,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_hours_approved',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Volunteer hours approved',
 		description: 'Notification when staff approve volunteer hours you logged',
 		defaults: { email: true, inApp: true, sms: false }
@@ -503,6 +577,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_hours_rejected',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Volunteer hours returned',
 		description: 'Notification when staff return volunteer hours you logged, with a reason',
 		defaults: { email: true, inApp: true, sms: false }
@@ -510,6 +585,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_invited',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'Invited to a shift',
 		// Email on. An invitation is a question addressed to one person, and a
 		// question nobody sees is not a chase — which is the whole reason this
@@ -520,6 +596,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_opened',
 		category: 'volunteering',
+		inAppDelivery: 'immediate',
 		label: 'Open shifts in your roles',
 		// Email only by default: the board is the in-app view of the same thing.
 		// One email a day at 9am club time, listing every new shift in the
@@ -530,6 +607,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_declined',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'A shift invitation was declined',
 		// In-app only and staff-only: it is the answer to a question they asked,
 		// and it belongs next to the shift rather than in their inbox.
@@ -541,6 +619,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_claimed',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'Volunteer shift claimed',
 		// In-app only, like the hours queue above and for the same reason: it is
 		// queue work, not news. But it has to exist — until now a claim produced
@@ -553,6 +632,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_confirmed',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'You are on the roster',
 		// Email on: this is the message that turns "I put my hand up" into "I am
 		// expected on Saturday", and it is the only one the member gets before
@@ -563,6 +643,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_dropped',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'Volunteer dropped a shift',
 		// In-app only. The useful half is that a place reopened, which is a
 		// coordinator's problem and nobody else's.
@@ -574,6 +655,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_cancelled',
 		category: 'volunteering',
+		inAppDelivery: 'digestIfLater',
 		label: 'A shift you were on was called off',
 		// Email on, and not optional in practice: somebody has arranged their
 		// Saturday around this. It is the one volunteer notification whose whole
@@ -584,6 +666,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_reminder',
 		category: 'volunteering',
+		inAppDelivery: 'immediate',
 		label: 'Volunteer shift reminder',
 		// Email on by default: the whole point is reaching somebody who isn't
 		// looking at the site the day before a shift they agreed to work.
@@ -593,6 +676,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_completed',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Volunteer shift finished',
 		// In-app only. The shift just happened — they know. This is the nudge to
 		// log the hours, and it sits where the pre-filled log lives.
@@ -602,6 +686,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'volunteer_shift_feedback',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'How did your shift go?',
 		description: 'A short survey the day after a shift you worked',
 		defaults: { email: true, inApp: true, sms: false }
@@ -609,6 +694,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'orientation_confirmed',
 		category: 'practice-space',
+		inAppDelivery: 'digestIfLater',
 		label: 'Someone is meeting you at the space',
 		// Email on, and deliberately not sent when the shift is *created*: "we
 		// hope somebody will meet you" is not information. "Sam is meeting you at
@@ -621,6 +707,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'first_visit',
 		category: 'practice-space',
+		inAppDelivery: 'immediate',
 		label: 'First visit',
 		// Sent in place of the reservation reminder for that booking.
 		description:
@@ -630,6 +717,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'orientation_unclaimed',
 		category: 'volunteering',
+		inAppDelivery: 'immediate',
 		label: 'Unstaffed orientation',
 		description: 'A day before an orientation shift that has no volunteer signed up',
 		defaults: { email: true, inApp: true, sms: false },
@@ -639,6 +727,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'community_event_submitted',
 		category: 'shows',
+		inAppDelivery: 'digest',
 		label: 'Community listing needs review',
 		// In-app only, for the same reason as the volunteer queue above. Fires
 		// only when a listing actually enters pending_review — a member saving a
@@ -650,6 +739,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'local_resource_submitted',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Local resource tip needs review',
 		description: 'Notification when someone suggests a listing for the Local Resources page',
 		defaults: { email: false, inApp: true, sms: false },
@@ -658,6 +748,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'community_event_reviewed',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Your community listing was reviewed',
 		description: 'Notification when staff approve or turn down a listing you submitted',
 		defaults: { email: true, inApp: true, sms: false }
@@ -665,6 +756,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'suggestion_responded',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Response to your suggestion',
 		// Email on: a member who posted an idea and heard nothing assumes it went
 		// nowhere, which is the exact failure this board exists to fix.
@@ -674,6 +766,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'suggestion_moderated',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Your suggestion was moved',
 		// Email on, and not optional in spirit: a suggestion can vanish from the
 		// board because somebody reported it. Silence there reads as a shadowban.
@@ -684,6 +777,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'classified_expiring',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Classified post expiring',
 		description: 'Reminder three days before a classified post you made leaves the board',
 		defaults: { email: true, inApp: true, sms: false }
@@ -691,6 +785,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'classified_moderated',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Classified post reviewed',
 		// Email on: a takedown note is the author's only route back to the board.
 		description: 'Notification when staff approve, restore or take down a classified post you made',
@@ -699,6 +794,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'moderation_appeal_filed',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Moderation appeal filed',
 		// In-app only: a queue item, not news. The Content Flags badge counts them.
 		description: 'Notification when a member appeals an upheld report',
@@ -708,6 +804,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'moderation_appeal_decided',
 		category: 'people',
+		inAppDelivery: 'digest',
 		label: 'Your appeal was decided',
 		// Email on: the member asked and is waiting, and silence reads as being ignored.
 		description: 'Notification when staff answer an appeal you filed',
@@ -716,6 +813,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'suggestion_edit_reviewed',
 		category: 'volunteering',
+		inAppDelivery: 'digest',
 		label: 'Your edit was reviewed',
 		// Email on: the member asked for something and is waiting on an answer.
 		description:
@@ -725,6 +823,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'community_event_unpublished',
 		category: 'shows',
+		inAppDelivery: 'digestIfLater',
 		label: 'Your community listing was taken down',
 		// Email on: the listing is off the guide and they need to know why,
 		// which is not something to leave sitting in a bell icon.
@@ -734,6 +833,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'announcement',
 		category: 'people',
+		inAppDelivery: 'immediate',
 		label: 'Group announcements',
 		// One key rather than one per kind. Four near-identical rows in the
 		// preferences UI would be one user decision, and adding a kind would
@@ -749,14 +849,27 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'ballot_opened',
 		category: 'membership',
+		inAppDelivery: 'immediate',
 		label: 'A ballot you can vote on opened',
 		// Email on: it goes only to the roll, and a vote missed is not recoverable.
 		description: 'When a committee or member-wide ballot opens and you are on its roll',
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: DIGEST_TYPE,
+		category: 'membership',
+		inAppDelivery: 'immediate',
+		label: 'Daily summary',
+		// Written straight to the bell by the daily digest, never through a
+		// preference: there is no email, so the category colour is never shown.
+		description: "The day's held notices, gathered into one entry in the bell",
+		defaults: { email: false, inApp: true, sms: false },
+		mandatory: true
+	},
+	{
 		key: 'ballot_result',
 		category: 'membership',
+		inAppDelivery: 'immediate',
 		label: 'Ballot results',
 		// In-app only by default: this reaches every member, and a whole-membership
 		// email belongs on the broadcast stream, not the transactional one.
@@ -764,6 +877,22 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: false, inApp: true, sms: false }
 	}
 ];
+
+/**
+ * Whether an in-app notice waits for the daily digest. Unknown types and a
+ * missing or past `happensAt` resolve immediate, so a gap here is an early
+ * notice, never a late one.
+ */
+export function holdsForDigest(
+	type: string,
+	happensAt: Date | null | undefined,
+	now: Date = new Date()
+): boolean {
+	const delivery = getNotificationType(type)?.inAppDelivery;
+	if (delivery === 'digest') return true;
+	if (delivery !== 'digestIfLater' || !happensAt) return false;
+	return happensAt.getTime() - now.getTime() > DIGEST_HOLD_MS;
+}
 
 export function getNotificationType(key: string): NotificationTypeDef | undefined {
 	return NOTIFICATION_TYPES.find((t) => t.key === key);

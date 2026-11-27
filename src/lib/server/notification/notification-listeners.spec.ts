@@ -2073,10 +2073,86 @@ describe('wall-clock payloads reach members formatted', () => {
 			mockDispatchEmailOnlyBatch
 		]
 			.flatMap((m) => m.mock.calls)
-			.map((call) => JSON.stringify(call));
+			// `happensAt` is the instant for the dispatcher, not text a member reads.
+			.map((call) =>
+				JSON.stringify(call, (key, value) => (key === 'happensAt' ? undefined : value))
+			);
 		expect(sent.length).toBeGreaterThan(0);
 		for (const raw of Object.values(wallClock)) {
 			expect(sent.join('\n')).not.toContain(raw);
 		}
+	});
+});
+
+// A digestIfLater notice is held only when its subject is a day or more away,
+// so each kind of subject has to hand the dispatcher its start (#3409).
+describe('happensAt on digestIfLater notices', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const happensAtOf = (type: string) =>
+		(
+			mockDispatch.mock.calls.find(([a]) => (a as { type: string }).type === type)?.[0] as {
+				happensAt: Date | null;
+			}
+		).happensAt;
+
+	it('gives a booking the instant its club date and time name', async () => {
+		await emit('reservation.confirmed', {
+			reservationId: 'r1',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'user@test.com',
+			date: '2026-11-14',
+			startTime: '15:00',
+			endTime: '16:30'
+		});
+
+		expect(happensAtOf('reservation_confirmed')).toEqual(clubInstant('2026-11-14', '15:00'));
+	});
+
+	it('gives a shift its start', async () => {
+		await emit('volunteer.signup_confirmed', {
+			signupId: 'sg-1',
+			shiftId: 'wo-1',
+			userId: 'vol-1',
+			userName: 'Sam',
+			userEmail: 'sam@test.com',
+			roleName: 'Door',
+			title: null,
+			eventTitle: null,
+			startsAt: '2026-09-06T00:45:00.000Z',
+			endsAt: '2026-09-06T01:30:00.000Z'
+		});
+
+		expect(happensAtOf('volunteer_shift_confirmed')).toEqual(new Date('2026-09-06T00:45:00.000Z'));
+	});
+
+	it('gives a cancelled show its start', async () => {
+		await emit('event.cancelled', {
+			eventTitle: 'Jazz Night',
+			eventDate: 'May 20',
+			startsAt: '2026-05-21T03:00:00.000Z',
+			refundNote: '',
+			ticketHolders: [{ attendeeName: 'Alice', attendeeEmail: 'alice@test.com', userId: 'user-1' }]
+		});
+
+		expect(happensAtOf('event_cancellation')).toEqual(new Date('2026-05-21T03:00:00.000Z'));
+	});
+
+	it('says null for a shift with no time booked', async () => {
+		await emit('volunteer.signup_confirmed', {
+			signupId: 'sg-1',
+			shiftId: 'wo-1',
+			userId: 'vol-1',
+			userName: 'Sam',
+			userEmail: 'sam@test.com',
+			roleName: 'Door',
+			title: null,
+			eventTitle: null,
+			startsAt: null,
+			endsAt: null
+		});
+
+		expect(happensAtOf('volunteer_shift_confirmed')).toBeNull();
 	});
 });

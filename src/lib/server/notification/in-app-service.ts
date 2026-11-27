@@ -1,5 +1,5 @@
 import { db } from '#lib/server/db/index.js';
-import { notification } from '#lib/server/db/schema/notification.js';
+import { DIGEST_TYPE, HELD_FOR_DIGEST, notification } from '#lib/server/db/schema/notification.js';
 import { eq, isNull, and, desc, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -8,6 +8,9 @@ import { eq, isNull, and, desc, sql } from 'drizzle-orm';
 // CRUD for the notification table. Notifications are displayed in the bell
 // dropdown and pushed via SSE for real-time delivery.
 // ---------------------------------------------------------------------------
+
+/** A row the daily digest has not yet taken: held rows are listed there, not in the bell. */
+export const notHeld = sql`json_extract(${notification.data}, ${'$.' + HELD_FOR_DIGEST}) is null`;
 
 export interface CreateNotificationParams {
 	userId: string;
@@ -62,7 +65,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
 	const [result] = await db
 		.select({ count: sql<number>`cast(count(*) as integer)` })
 		.from(notification)
-		.where(and(eq(notification.userId, userId), isNull(notification.readAt)));
+		.where(and(eq(notification.userId, userId), isNull(notification.readAt), notHeld));
 
 	return result?.count ?? 0;
 }
@@ -74,28 +77,66 @@ export async function getForUser(userId: string, opts: { limit?: number; offset?
 	return db
 		.select()
 		.from(notification)
-		.where(eq(notification.userId, userId))
+		.where(and(eq(notification.userId, userId), notHeld))
 		.orderBy(desc(notification.createdAt), desc(notification.id))
 		.limit(limit)
 		.offset(offset);
 }
 
+/**
+ * Reading a summary reads the rows it lists: they are hidden from the bell, so
+ * this is the only place they get a `readAt`. One statement, one bound id,
+ * however many the summary holds.
+ */
 export async function markRead(notificationId: string, userId: string): Promise<void> {
-	await db
-		.update(notification)
-		.set({ readAt: new Date() })
-		.where(
-			and(
-				eq(notification.id, notificationId),
-				eq(notification.userId, userId),
-				isNull(notification.readAt)
+	const readAt = new Date();
+	await db.batch([
+		db
+			.update(notification)
+			.set({ readAt })
+			.where(
+				and(
+					eq(notification.id, notificationId),
+					eq(notification.userId, userId),
+					isNull(notification.readAt)
+				)
+			),
+		db
+			.update(notification)
+			.set({ readAt })
+			.where(
+				and(
+					eq(notification.userId, userId),
+					isNull(notification.readAt),
+					sql`${notification.id} in (
+						select j.value from notification d, json_each(d.data, '$.ids') j
+						where d.id = ${notificationId} and d.user_id = ${userId} and d.type = ${DIGEST_TYPE}
+					)`
+				)
 			)
-		);
+	]);
 }
 
+/** Held rows stay unread until their summary is read, so a digest not yet written still finds them. */
 export async function markAllRead(userId: string): Promise<void> {
-	await db
-		.update(notification)
-		.set({ readAt: new Date() })
-		.where(and(eq(notification.userId, userId), isNull(notification.readAt)));
+	const readAt = new Date();
+	await db.batch([
+		db
+			.update(notification)
+			.set({ readAt })
+			.where(
+				and(
+					eq(notification.userId, userId),
+					isNull(notification.readAt),
+					sql`${notification.id} in (
+						select j.value from notification d, json_each(d.data, '$.ids') j
+						where d.user_id = ${userId} and d.type = ${DIGEST_TYPE} and d.read_at is null
+					)`
+				)
+			),
+		db
+			.update(notification)
+			.set({ readAt })
+			.where(and(eq(notification.userId, userId), isNull(notification.readAt), notHeld))
+	]);
 }

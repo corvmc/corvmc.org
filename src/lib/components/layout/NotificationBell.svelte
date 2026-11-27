@@ -11,6 +11,7 @@
 		markAllNotificationsRead
 	} from '#lib/remote/notifications.remote.js';
 	import { timeAgo } from '#lib/utils/format.js';
+	import { parseDigest } from '#lib/utils/notification-digest.js';
 	import type { ChromeNotification } from './chrome';
 
 	// Props, not a query of its own. This component is mounted by `AppTopbar` on
@@ -173,6 +174,7 @@
 				{:else}
 					{#each notifications as n (n.id)}
 						{@const isUnread = !n.readAt}
+						{@const digest = n.type === 'notification_digest' ? parseDigest(n.data) : null}
 						<div class="relative">
 							{#if n.href}
 								<!-- A route this app stored in D1 when the notification was created; the
@@ -234,6 +236,35 @@
 											</p>
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
+											{/if}
+											{#if digest}
+												<ul class="mt-1 space-y-0.5">
+													{#each digest.items as item, i (i)}
+														<li class="truncate text-xs">
+															{#if item.href}
+																<a
+																	href={item.href as ResolvedPathname}
+																	class="link link-primary"
+																	onclick={() => {
+																		if (isUnread) markRead(n.id);
+																		open = false;
+																	}}
+																>
+																	{item.title}
+																</a>
+															{:else}
+																{item.title}
+															{/if}
+														</li>
+													{/each}
+												</ul>
+												{#if digest.count > digest.items.length}
+													<p class="mt-0.5 text-xs text-base-content/60">
+														{m.layout_notifications_digest_more_text({
+															count: digest.count - digest.items.length
+														})}
+													</p>
+												{/if}
 											{/if}
 											<p class="mt-0.5 text-xs text-base-content/40">{timeAgo(n.createdAt)}</p>
 										</div>
