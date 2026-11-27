@@ -176,7 +176,9 @@ const SHAPES: Fixture[] = [
 			splitShown: true,
 			toActs: '$9.98',
 			toCollective: '$4.28',
-			ticketsUrl: 'https://corvmc.org/events/evt-1/tickets/success?purchase_id=7f3a9c21'
+			ticketsUrl: 'https://corvmc.org/events/evt-1/tickets/success?purchase_id=7f3a9c21',
+			accountOffered: false,
+			signupUrl: ''
 		}
 	},
 	{
@@ -211,7 +213,38 @@ const SHAPES: Fixture[] = [
 			splitShown: true,
 			toActs: '$75.00',
 			toCollective: '$0.00',
-			ticketsUrl: 'https://corvmc.org/events/evt-2/tickets/success?purchase_id=b82d5e60'
+			ticketsUrl: 'https://corvmc.org/events/evt-2/tickets/success?purchase_id=b82d5e60',
+			accountOffered: false,
+			signupUrl: ''
+		}
+	},
+	{
+		// A guest with no account: the one variant that carries the offer, and
+		// the only one whose `signupUrl` is read.
+		name: 'ticket-guest',
+		alias: 'ticket-confirmation',
+		model: {
+			attendeeName: 'Maya',
+			eventTitle: 'Real Book Club',
+			eventDate: 'Thursday, December 5',
+			eventTime: '7:00 PM',
+			quantity: 1,
+			multiple: false,
+			preview_text: 'Real Book Club · Thursday, December 5 at 7:00 PM',
+			ticketCodes: [{ code: 'CMC-4K2P-9XQ1' }],
+			orderId: '7F3A9C21',
+			unitPrice: '$15.00',
+			subtotal: '$15.00',
+			feesCovered: false,
+			fees: '$0.00',
+			total: '$15.00',
+			splitShown: false,
+			toActs: '$0.00',
+			toCollective: '$0.00',
+			ticketsUrl: 'https://corvmc.org/events/evt-1/tickets/success?purchase_id=7f3a9c21',
+			accountOffered: true,
+			signupUrl:
+				'https://corvmc.org/login?register&email=maya%40example.com&redirect=%2Fmember%2Fevents'
 		}
 	},
 	{

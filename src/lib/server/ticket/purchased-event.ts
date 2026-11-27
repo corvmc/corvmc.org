@@ -57,6 +57,7 @@ export async function emitTicketPurchased(
 		eventTime: formatTimeSimple(eventRow.startsAt, TZ),
 		ticketCodes: tickets.map((t) => t.code),
 		quantity: tickets.length,
+		guestPurchase: tickets.every((t) => t.userId == null),
 		...amounts
 	});
 }

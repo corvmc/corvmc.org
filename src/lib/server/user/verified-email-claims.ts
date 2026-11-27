@@ -47,6 +47,20 @@ export async function verifiedAccountIdForEmail(email: string): Promise<string |
 }
 
 /**
+ * Whether a live account holds the address, verified or not. Only for mail
+ * going to that address: the answer must never reach a page, because anyone
+ * can type an address into a form.
+ */
+export async function hasAccountForEmail(email: string): Promise<boolean> {
+	const [owner] = await db
+		.select({ id: user.id })
+		.from(user)
+		.where(and(sql`lower(${user.email}) = ${email.toLowerCase().trim()}`, isNull(user.deletedAt)))
+		.limit(1);
+	return Boolean(owner);
+}
+
+/**
  * Who a purchase belongs to: the signed-in buyer, else the verified account
  * under the address. A failed lookup leaves the ticket a guest ticket, which
  * the next verification still claims, so it never fails the purchase.
