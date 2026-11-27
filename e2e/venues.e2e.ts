@@ -40,15 +40,15 @@ test.describe('venues', () => {
 		await page.getByRole('dialog').locator('button[type="submit"]').click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
-		// Create lands on the Listing tab; reloaded so the test opens Edit from a fresh page.
+		// Create lands on the Listing tab; reloaded so the form seeds from a fresh page.
 		await page.goto(new URL(page.url()).pathname);
-		await page.getByTestId('edit-listing').click();
 
 		// The toggle is there while the show is in our room.
 		await expect(page.getByTestId('reserve-space')).toBeVisible({
 			timeout: 15000
 		});
 
+		await page.locator('input[type="radio"][value="venue"]').check();
 		await page
 			.locator('select:is([name="venueId"], [name^="venueId/"])')
 			.selectOption({ label: SEED_VENUE_OFFSITE_NAME });
@@ -58,7 +58,7 @@ test.describe('venues', () => {
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
-		await page.locator('select:is([name="venueId"], [name^="venueId/"])').selectOption('');
+		await page.locator('input[type="radio"][value="room"]').check();
 		await expect(page.getByTestId('reserve-space')).toBeVisible();
 	});
 });

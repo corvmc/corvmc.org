@@ -144,6 +144,6 @@ test.describe('productions', () => {
 
 		await page.goto(`/staff/events/${SEED_PRODUCTION_EVENT_ID}`);
 		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_PRODUCTION_EVENT_ID}$`));
-		await expect(page.getByTestId('edit-listing')).toBeVisible({ timeout: 15000 });
+		await expect(page.getByTestId('listing-form')).toBeVisible({ timeout: 15000 });
 	});
 });

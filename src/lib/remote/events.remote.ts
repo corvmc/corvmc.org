@@ -1299,45 +1299,6 @@ export const getStaffEventPage = query(z.string(), async (id) => {
  * which is the await-chain the comment on the old page warned about.
  */
 /**
- * Staff set the bill on any event, and `asStaff` is not a formality.
- *
- * `setEventLineup` resolves a newly linked act to `confirmed` when `asStaff` is
- * set — "Staff booked the show, so every act they name is already agreed." That
- * holds for a CMC production. It is false for a listing: staff did not book a
- * member's show, and confirming on their behalf would put a credit on the named
- * band's public profile that the band never agreed to. Consent is the whole
- * point of the pending state — see
- * `docs/development/business-workflows.md#9-the-gig-guide-and-community-listings`.
- *
- * So the flag follows the source, and on a listing a new link lands `pending`
- * and invites the band, exactly as when a member links it. Do not simplify this
- * to a constant.
- *
- * Both paths are already safe against reviving a refused credit: the prior-row
- * branch in `setEventLineup` runs first, so `declined` stays `declined`.
- */
-export const setStaffEventLineup = form(
-	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
-	async (data) => {
-		await requireListingWriter(data.eventId, 'production.book');
-		const evt = await getById(data.eventId);
-		if (!evt) error(404, 'Event not found');
-
-		const lineup = parseStaffLineupField(data.lineup);
-		if (lineup) {
-			try {
-				await setEventLineup(data.eventId, lineup, { asStaff: evt.source === 'cmc' });
-			} catch (err) {
-				mapDomainError(err);
-			}
-		}
-
-		void getStaffEventPage(data.eventId).refresh();
-		return { success: true };
-	}
-);
-
-/**
  * The production console reads on `event.read`, or on either half of the show
  * held through the committees taking part in its project.
  */

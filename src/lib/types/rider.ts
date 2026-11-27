@@ -20,7 +20,7 @@ import {
  * types too, and a `.svelte` file cannot reach `$lib/server`. The shape is the
  * draft — no ids, no `sortOrder` — because **the client does not get to send an
  * order**: the service re-derives `sortOrder` from array position, the way
- * `setStaffEventLineup` does, so there is nowhere for a stale position to come
+ * `setEventLineup` does, so there is nowhere for a stale position to come
  * from.
  */
 export const riderInputDraftSchema = z.object({

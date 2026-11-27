@@ -34,7 +34,6 @@ const CLIENT_ONLY = [
 	'./lib/components/groups/GroupRecordPanel.svelte',
 	'./routes/staff/reservations/CreateModal.svelte',
 	'./lib/components/events/CreateEventModal.svelte',
-	'./lib/components/events/ListingEditForm.svelte',
 	'./lib/components/reservations/ConflictWarnings.svelte',
 	'./lib/components/actions/CreateLoanAction.svelte',
 	'./lib/components/actions/CheckOutKitAction.svelte'

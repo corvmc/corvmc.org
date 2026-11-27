@@ -11,7 +11,7 @@
 	/**
 	 * A listing's sale as staff monitor it: price, capacity, sold and remaining,
 	 * where the money went, comps and the ticket list (#1949). The sale terms are
-	 * edited in `ListingEditForm`. Comps are CMC's own sales only: a band selling
+	 * edited in the Listing form. Comps are CMC's own sales only: a band selling
 	 * its gig (#1203) is watched here, not comped.
 	 */
 	let {

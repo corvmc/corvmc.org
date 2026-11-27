@@ -106,7 +106,6 @@ async function createEvent(
 
 /** From the listing: open Edit, tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
-	await page.getByTestId('edit-listing').click();
 	await page.getByTestId('reserve-space').check();
 	await saveButton(page).click();
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
@@ -120,7 +119,6 @@ test.describe('staff event creation — minimal modal', () => {
 		// Never saved, so the date cannot collide with anything.
 		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await page.getByTestId('edit-listing').click();
 		await page.getByTestId('reserve-space').check();
 		await expect(
 			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
@@ -205,7 +203,6 @@ test.describe('staff event creation — minimal modal', () => {
 			SEED_CONFLICT_START,
 			SEED_CONFLICT_END
 		);
-		await page.getByTestId('edit-listing').click();
 		const reserve = page.getByTestId('reserve-space');
 		await reserve.check();
 
@@ -248,7 +245,6 @@ test.describe('staff event edit — reserve space', () => {
 		// Not held yet: nothing on the listing links to a reservation.
 		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(0);
 
-		await page.getByTestId('edit-listing').click();
 		const reserve = page.getByTestId('reserve-space');
 		await expect(reserve).toBeVisible();
 		await reserve.check();
@@ -285,7 +281,6 @@ test.describe('staff event edit — reserve space', () => {
 		// window that overlaps the event's own reservation. Earlier rather than
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
-		await page.getByTestId('edit-listing').click();
 		await page
 			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
 			.fill('17:00');

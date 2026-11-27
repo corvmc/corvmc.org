@@ -166,6 +166,8 @@ edit mode.
 1. **Reading never requires editing.** Every fact a section owns is legible without opening its
    form. The production console states the date, doors, show time and room in a read-only line
    above its tabs, and leaves changing them to the listing.
+   Not an Edit mode, because a fact behind an Edit button is hidden (#3271): the Listing tab is
+   one always-open form with one Save.
 2. **A section states its own state** — done, empty or blocked — in its heading, so the page can
    be scanned. Pass it to `InfoCard`'s `state` prop. A console split into tabs puts the same
    state on each tab with `TabBar`'s `badge`, since a closed tab's headings are not on screen;
