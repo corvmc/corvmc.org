@@ -111,13 +111,19 @@ async function createEvent(
  */
 const readyForm = (page: Page) => page.locator('[data-testid="listing-form"][data-ready]');
 
-/** Tick the hold once the form is interactive, and wait for its time fields. */
+/**
+ * Tick the hold once the form is interactive, and wait for the form to carry it.
+ * The time fields mount before their values and the `rebookReservation` flag
+ * reach the DOM (the commit waits on the conflict query), and a submit reads the
+ * DOM, so a save in that gap posts no hold and still reports success.
+ */
 async function tickReserveSpace(page: Page) {
 	await expect(readyForm(page)).toBeVisible();
 	await page.getByTestId('reserve-space').check();
+	await expect(page.locator('input[type="hidden"][name*="rebookReservation"]')).toBeAttached();
 	await expect(
 		page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-	).toBeVisible();
+	).not.toHaveValue('');
 }
 
 /**
