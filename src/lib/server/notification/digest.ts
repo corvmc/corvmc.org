@@ -7,13 +7,10 @@ import type { DigestData, DigestItem } from '#lib/utils/notification-digest.js';
 
 /**
  * The daily in-app digest (#3409): one `notification_digest` row per member
- * who has notices held since the last pass, from 9am club time. Held rows are
- * ordinary `notification` rows flagged in `data` by the dispatcher; they stay
- * out of the bell and the unread count, and this row is where they surface.
- *
- * In-app only: email is unchanged for every type. Not a reminder-registry entry,
- * for the reason open shifts are not: the registry dispatches once per member,
- * and these rows are written directly.
+ * with notices held since the last pass. Held rows are `notification` rows
+ * the dispatcher flagged in `data`; they stay out of the bell and the unread
+ * count. In-app only. Written directly, not a reminder-registry entry: the
+ * registry dispatches once per member.
  */
 
 /** The latch key, in `reminder_sent`. */
@@ -34,13 +31,9 @@ function summary(items: DigestItem[], ids: string[]): DigestData {
 
 /**
  * Write today's digest if it is owed. The day is stamped even when nothing is
- * held, so a notice held after 9am waits for tomorrow's.
- *
- * `now` is cut to whole seconds, which is what `created_at` stores, so
- * `[since, until)` partitions the held rows: the stamp records `until` and the
- * next pass starts from it.
- *
- * Throws on a failed write, leaving the day and the held rows for the next pass.
+ * held, so a notice held after 9am waits for tomorrow's. `now` is cut to whole
+ * seconds (what `created_at` stores), so `[since, until)` partitions the held
+ * rows. Throws on a failed write, leaving the held rows for the next pass.
  */
 export async function sendInAppDigest(now: Date = new Date()): Promise<InAppDigestResult> {
 	const window = await digestWindow(IN_APP_DIGEST_KEY, now);

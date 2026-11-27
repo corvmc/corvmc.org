@@ -1,5 +1,5 @@
 import { notification, notificationPreference } from '../../src/lib/server/db/schema/notification';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { type SeedUser } from './types';
 import { pickN, random, randomInt } from './util';
 
@@ -91,20 +91,14 @@ async function seedDigestRows(member: SeedUser) {
 		data: { heldForDigest: true },
 		createdAt
 	});
-	const summarised = await db
-		.insert(notification)
-		.values([
-			held('membership_receipt', 'Membership payment received', '/member/account', hoursAgo(30)),
-			held('task_assigned', 'Task assigned: Restock the lobby', '/member/tasks', hoursAgo(28))
-		])
-		.returning();
-	const waiting = await db
-		.insert(notification)
-		.values([
-			held('equipment_returned', 'Equipment returned', '/member/equipment', hoursAgo(4)),
-			held('volunteer_hours_approved', 'Volunteer hours approved', '/member/volunteer', hoursAgo(2))
-		])
-		.returning();
+	const summarised = await batchInsert(notification, [
+		held('membership_receipt', 'Membership payment received', '/member/account', hoursAgo(30)),
+		held('task_assigned', 'Task assigned: Restock the lobby', '/member/tasks', hoursAgo(28))
+	]);
+	const waiting = await batchInsert(notification, [
+		held('equipment_returned', 'Equipment returned', '/member/equipment', hoursAgo(4)),
+		held('volunteer_hours_approved', 'Volunteer hours approved', '/member/volunteer', hoursAgo(2))
+	]);
 	const [summary] = await db
 		.insert(notification)
 		.values({
