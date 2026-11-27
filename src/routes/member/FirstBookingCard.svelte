@@ -25,7 +25,7 @@
 		testid="first-booking"
 	>
 		{#if firstBooking.slots.length > 0}
-			<p class="text-muted">{m.member_first_booking_body()}</p>
+			<p class="text-muted">{m.member_first_booking_text()}</p>
 			<div class="mt-3 flex flex-wrap gap-2">
 				{#each firstBooking.slots as slot (slot.date)}
 					<!-- A full reload, as the bands card does: the page opens its dialog on arrival. -->
@@ -35,7 +35,7 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="text-muted">{m.member_first_booking_none_body()}</p>
+			<p class="text-muted">{m.member_first_booking_none_text()}</p>
 			<div class="mt-3">
 				<Button href={resolve('member/reservations')} variant="default" size="sm">
 					{m.member_book_session_label()}
