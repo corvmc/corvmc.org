@@ -216,6 +216,8 @@ export interface TicketPurchasedEvent {
 	eventTime: string;
 	ticketCodes: string[];
 	quantity: number;
+	/** No ticket in the purchase belongs to an account. */
+	guestPurchase: boolean;
 	/** Price per ticket actually charged, after any member discount. */
 	unitPriceCents: number;
 	/** Tickets only: unitPriceCents × quantity. */

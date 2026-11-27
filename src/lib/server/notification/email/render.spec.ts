@@ -262,6 +262,16 @@ describe('ticket-confirmation', () => {
 		expect(text).toContain('To the bands on the bill: $75.00');
 		expect(text).toContain('To the Collective: $0.00');
 	});
+
+	it('carries the account offer link only for a guest purchase', () => {
+		const guest = byName('ticket-guest');
+		const signupHref = /href="https:\/\/corvmc\.org\/login\?register&amp;email/;
+		expect(guest.html).toMatch(signupHref);
+		expect(guest.text).toContain('Create account: https://corvmc.org/login?register&email=');
+		const member = byName('ticket-single');
+		expect(member.html).not.toMatch(signupHref);
+		expect(member.text).not.toContain('Create account');
+	});
 });
 
 describe('inbox-reply', () => {

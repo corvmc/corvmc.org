@@ -19,7 +19,7 @@ vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	linkGuestTicketsToUser: (...a: unknown[]) => linkGuestTicketsToUser(...(a as []))
 }));
 
-const { claimVerifiedEmail, verifiedAccountIdForEmail, purchaseOwnerId } =
+const { claimVerifiedEmail, verifiedAccountIdForEmail, purchaseOwnerId, hasAccountForEmail } =
 	await import('./verified-email-claims');
 
 function account(id: string, email: string, opts: { verified?: boolean; deleted?: boolean } = {}) {
@@ -77,6 +77,23 @@ describe('verifiedAccountIdForEmail', () => {
 		expect(await verifiedAccountIdForEmail('alice@example.com')).toBeNull();
 		expect(await verifiedAccountIdForEmail('bob@example.com')).toBeNull();
 		expect(await verifiedAccountIdForEmail('nobody@example.com')).toBeNull();
+	});
+});
+
+describe('hasAccountForEmail', () => {
+	it('finds a live account, verified or not, whatever the case of the address', async () => {
+		account('user-1', 'alice@example.com');
+		account('user-2', 'bob@example.com', { verified: true });
+
+		expect(await hasAccountForEmail(' Alice@Example.com ')).toBe(true);
+		expect(await hasAccountForEmail('bob@example.com')).toBe(true);
+	});
+
+	it('ignores deleted and unknown addresses', async () => {
+		account('user-1', 'alice@example.com', { deleted: true });
+
+		expect(await hasAccountForEmail('alice@example.com')).toBe(false);
+		expect(await hasAccountForEmail('nobody@example.com')).toBe(false);
 	});
 });
 

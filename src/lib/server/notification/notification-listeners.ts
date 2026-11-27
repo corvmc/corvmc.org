@@ -29,6 +29,8 @@ import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } fr
 import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '#lib/server/sentry.js';
+import { hasAccountForEmail } from '#lib/server/user/verified-email-claims.js';
+import { accountOfferPath } from '#lib/utils/account-offer.js';
 import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { taskNoticeRecipients } from '#lib/server/task/task-audience.js';
@@ -310,6 +312,17 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Ticket purchase confirmation + receipt (dedicated template) ---
 	domainEvents.on('ticket.purchased', async ({ data: event }) => {
+		// The offer goes to the address that bought, so checking whether it
+		// holds an account reveals nothing to anyone else. A failed lookup
+		// sends the receipt without the offer.
+		let accountOffered = false;
+		if (event.guestPurchase) {
+			try {
+				accountOffered = !(await hasAccountForEmail(event.attendeeEmail));
+			} catch (err) {
+				captureException(err, { scope: 'ticket.purchased.account-offer' });
+			}
+		}
 		// Ticket buyers may not have accounts — use email-only dispatch
 		await dispatchEmailOnly({
 			type: 'ticket_confirmation',
@@ -344,7 +357,9 @@ export function registerAllNotificationListeners(): void {
 				splitShown: event.actsCents > 0 || event.collectiveCents > 0,
 				toActs: formatCents(event.actsCents),
 				toCollective: formatCents(event.collectiveCents),
-				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`
+				ticketsUrl: `${siteUrl}/events/${event.eventId}/tickets/success?purchase_id=${event.purchaseId}`,
+				accountOffered,
+				signupUrl: accountOffered ? `${siteUrl}${accountOfferPath(event.attendeeEmail)}` : ''
 			}
 		});
 	});
