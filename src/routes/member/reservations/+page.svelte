@@ -69,13 +69,11 @@
 	$effect(() => {
 		if (bookingOpen || !prefill) return;
 		prefill = undefined;
-		const rest = new SvelteURLSearchParams(page.url.searchParams);
+		const rest = new SvelteURLSearchParams(String(page.url.searchParams));
 		if (!SLOT_PARAMS.some((k) => rest.has(k))) return;
 		SLOT_PARAMS.forEach((k) => rest.delete(k));
 		void goto(withQuery(resolve('member/reservations'), rest), {
-			replace: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true
 		});
 	});
 
