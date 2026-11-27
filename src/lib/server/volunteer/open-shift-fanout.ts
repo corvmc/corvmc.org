@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import {
 	volunteerRole,
@@ -9,6 +9,7 @@ import {
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
+import { dayStamp, digestWindow } from '#lib/server/reminders/daily-latch.js';
 import { outboxMessage } from '#lib/server/db/schema/outbox.js';
 import { emailRow } from '#lib/server/outbox/outbox-row.js';
 import { deliverSoon } from '#lib/server/outbox/outbox-service.js';
@@ -17,8 +18,7 @@ import { standaloneEmail } from '#lib/server/notification/dispatcher.js';
 import { createNotifications } from '#lib/server/notification/in-app-service.js';
 import { listBatchRecipients } from '#lib/server/notification/recipient.js';
 import { captureException } from '#lib/server/sentry.js';
-import { clubToday } from '#lib/config.js';
-import { clubInstant, formatDateLong, formatTime } from '#lib/utils/format.js';
+import { formatDateLong, formatTime } from '#lib/utils/format.js';
 import { shiftLabel } from '#lib/utils/shift-label.js';
 import { liveShift, notOnCancelledListing, openTask, shiftClaimedSql } from './work-order-service';
 
@@ -36,15 +36,6 @@ export const SHIFT_OPENED_TYPE = 'volunteer_shift_opened';
 /** The per-day latch: `subject_id` is the club date, `sent_at` the pass's `now`. */
 export const SHIFT_DIGEST_KEY = 'shift_opened_digest';
 
-/** Club wall-clock time the digest goes out. A later pass that day still sends. */
-export const DIGEST_TIME = '09:00';
-
-/**
- * The first digest's lookback, when no earlier digest exists: the backlog from
- * before the feature is not news.
- */
-const FIRST_LOOKBACK_MS = 24 * 60 * 60 * 1000;
-
 /** D1 caps a statement at 100 bound parameters. */
 const IN_CHUNK = 90;
 
@@ -57,30 +48,6 @@ export interface NewOpenShift {
 	startsAt: Date;
 	endsAt: Date;
 	createdByUserId: string | null;
-}
-
-export interface DigestWindow {
-	/** The club date this digest is for. */
-	day: string;
-	/** Shifts created at or after this go in: the previous digest's pass. */
-	since: Date;
-}
-
-/**
- * Whether today's digest is owed: it is 9am or later in club time and no
- * digest has gone out for today's club date. Null when not owed.
- */
-export async function digestWindow(now: Date): Promise<DigestWindow | null> {
-	const day = clubToday(now);
-	if (now < clubInstant(day, DIGEST_TIME)) return null;
-	const [last] = await db
-		.select({ day: reminderSent.subjectId, sentAt: reminderSent.sentAt })
-		.from(reminderSent)
-		.where(eq(reminderSent.reminderKey, SHIFT_DIGEST_KEY))
-		.orderBy(desc(reminderSent.sentAt))
-		.limit(1);
-	if (last?.day === day) return null;
-	return { day, since: last?.sentAt ?? new Date(now.getTime() - FIRST_LOOKBACK_MS) };
 }
 
 /** Shifts created since `since`, still open to sign-ups, not yet announced. */
@@ -195,18 +162,13 @@ export interface AnnounceResult {
  * Throws on a failed write, leaving the day and the shifts open for the next pass.
  */
 export async function announceOpenShifts(now: Date = new Date()): Promise<AnnounceResult> {
-	const window = await digestWindow(now);
+	const window = await digestWindow(SHIFT_DIGEST_KEY, now);
 	if (!window) return { due: false, shifts: 0, emailed: 0 };
-	const dayStamp = db.insert(reminderSent).values({
-		reminderKey: SHIFT_DIGEST_KEY,
-		subjectType: 'club_day',
-		subjectId: window.day,
-		sentAt: now
-	});
+	const stamp = dayStamp(SHIFT_DIGEST_KEY, window, now);
 
 	const shifts = await listNewOpenShifts(now, window.since);
 	if (shifts.length === 0) {
-		await dayStamp;
+		await stamp;
 		return { due: true, shifts: 0, emailed: 0 };
 	}
 
@@ -239,7 +201,7 @@ export async function announceOpenShifts(now: Date = new Date()): Promise<Announ
 		subjectId: s.shiftId
 	}));
 	await db.batch([
-		dayStamp,
+		stamp,
 		...chunkInsert(stamps, (group) => db.insert(reminderSent).values(group)),
 		...chunkInsert(emails, (group) => db.insert(outboxMessage).values(group))
 	] as unknown as Parameters<typeof db.batch>[0]);

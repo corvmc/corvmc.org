@@ -464,7 +464,7 @@ describe('dispatchBatch', () => {
 		inAppEnabled
 	});
 	const params = {
-		type: 'group_member_added',
+		type: 'group_chat_message',
 		userIds: ['a', 'b', 'c'],
 		title: "You've been added to Jazz Club",
 		body: 'Sam added you',
@@ -481,11 +481,11 @@ describe('dispatchBatch', () => {
 
 		await dispatchBatch(params);
 
-		expect(listBatchRecipients).toHaveBeenCalledWith(['a', 'b', 'c'], 'group_member_added');
+		expect(listBatchRecipients).toHaveBeenCalledWith(['a', 'b', 'c'], 'group_chat_message');
 		const rows = createNotifications.mock.calls[0][0];
 		expect(rows.map((r: { userId: string }) => r.userId)).toEqual(['a', 'b']);
 		expect(rows[0]).toMatchObject({
-			type: 'group_member_added',
+			type: 'group_chat_message',
 			title: params.title,
 			href: params.href
 		});
@@ -499,7 +499,7 @@ describe('dispatchBatch', () => {
 		expect(messages.map((m: { to: string }) => m.to)).toEqual(['a@example.com', 'c@example.com']);
 		expect(messages[0].model.greeting).toContain('Name');
 		expect(JSON.stringify(messages[0].model)).toContain('/member/groups/jazz-club');
-		expect(messages[0].tag).toBe('group_member_added');
+		expect(messages[0].tag).toBe('group_chat_message');
 		expect(queueEmail).not.toHaveBeenCalled();
 		expect(createNotification).not.toHaveBeenCalled();
 	});
@@ -509,5 +509,79 @@ describe('dispatchBatch', () => {
 		await dispatchBatch({ ...params, userIds: [] });
 		expect(createNotifications).not.toHaveBeenCalled();
 		expect(queueEmails).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * A notice held for the daily digest is stored, flagged and kept off the
+ * stream; every other one is pushed at once (#3409). The class guarded is a
+ * time-critical notice delayed, so the immediate side names the types whose
+ * point is that the member sees them now.
+ */
+describe('in-app digest hold', () => {
+	const HOUR = 3600_000;
+	const base = { userId: 'user-1', userEmail: 'user@example.com', title: 'T', body: 'B' };
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		isDeliverable.mockResolvedValue(true);
+		getPreference.mockResolvedValue({ email: false, inApp: true });
+		createNotification.mockResolvedValue(FAKE_ROW);
+	});
+
+	it('stores a digest type flagged and does not push it', async () => {
+		await dispatch({ ...base, type: 'task_assigned', data: { taskId: 't1' } });
+
+		expect(createNotification).toHaveBeenCalledWith(
+			expect.objectContaining({ data: { taskId: 't1', heldForDigest: true } })
+		);
+		expect(pushToUser).not.toHaveBeenCalled();
+	});
+
+	it.each(['door_code_ready', 'reservation_reminder', 'waitlist_slot_available'])(
+		'pushes %s at once, unflagged',
+		async (type) => {
+			await dispatch({
+				...base,
+				type,
+				data: { a: 1 },
+				happensAt: new Date(Date.now() + 72 * HOUR)
+			});
+
+			expect(createNotification).toHaveBeenCalledWith(expect.objectContaining({ data: { a: 1 } }));
+			expect(pushToUser).toHaveBeenCalledTimes(1);
+		}
+	);
+
+	it('holds a digestIfLater type only when it happens more than a day out', async () => {
+		await dispatch({
+			...base,
+			type: 'reservation_confirmed',
+			happensAt: new Date(Date.now() + 48 * HOUR)
+		});
+		expect(pushToUser).not.toHaveBeenCalled();
+
+		await dispatch({
+			...base,
+			type: 'reservation_confirmed',
+			happensAt: new Date(Date.now() + 2 * HOUR)
+		});
+		expect(pushToUser).toHaveBeenCalledTimes(1);
+
+		await dispatch({ ...base, type: 'reservation_confirmed' });
+		expect(pushToUser).toHaveBeenCalledTimes(2);
+	});
+
+	it('flags a batch of digest rows and pushes none of them', async () => {
+		listBatchRecipients.mockResolvedValue([
+			{ userId: 'a', name: 'A', email: 'a@x.test', emailEnabled: false, inAppEnabled: true }
+		]);
+
+		await dispatchBatch({ type: 'task_ready', userIds: ['a'], title: 'T' });
+
+		expect(createNotifications.mock.calls[0][0][0]).toMatchObject({
+			data: { heldForDigest: true }
+		});
+		expect(pushToUser).not.toHaveBeenCalled();
 	});
 });

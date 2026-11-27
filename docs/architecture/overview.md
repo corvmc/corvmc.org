@@ -317,6 +317,17 @@ inside the request handler (it must run there, not at module load, because
 | `reservation.cancelled`  | inline in `register-listeners.ts`                                                                   | Promotes the next waitlisted reservation into the freed slot                               |
 | (most others)            | `notification/notification-listeners.ts`                                                            | Emails/in-app notifications, routed through the dispatcher with per-user preference checks |
 
+**In-app digest (#3409).** Each type in `NOTIFICATION_TYPES` declares `inAppDelivery`:
+`immediate`, `digest`, or `digestIfLater` (held only when the caller passes `happensAt` more than
+24 hours out). The dispatcher stores a held notice as an ordinary `notification` row with
+`data.heldForDigest`, pushes nothing, and the bell list and unread count skip it. From 9am club
+time, `/api/cron/reminders` writes one `notification_digest` row per member listing what was held
+since the last pass, latched in `reminder_sent` like the open-shift digest
+(`reminders/daily-latch.ts`). Reading the summary reads the rows it lists. Email is unchanged for
+every type. Not a registry entry, because the registry dispatches once per member and these rows
+are written directly. Not `readAt` set at write time, because that would count unseen notices as
+read. Announcement and ballot fan-outs insert rows directly and stay immediate.
+
 **Failure mode to understand:** this is an in-process event emitter, not a queue. Listeners
 run best-effort inside the same request; there is no persistence, retry, or dead-letter. If
 a listener throws or the isolate dies mid-listener, that side effect is lost. The one place
@@ -385,31 +396,31 @@ Authorization: Bearer <CRON_SECRET>
 The endpoints and their schedule (cron expressions are UTC — Pacific wall-clock times shift
 an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 
-| Endpoint                                    | Purpose                                                                                                             | Cron (UTC)     |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                                               | `*/5 * * * *`  |
-| `/api/cron/send-outbox`                     | Send outbox messages that are due, retrying failed sends with backoff                                               | `*/5 * * * *`  |
-| `/api/cron/lock-job-requested`              | Run the daily lock job when staff asked for it (Run now, Retry door codes)                                          | `*/5 * * * *`  |
-| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                                                           | `*/15 * * * *` |
-| `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                                                | `*/15 * * * *` |
-| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                                             | `*/15 * * * *` |
-| `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                                              | `*/15 * * * *` |
-| `/api/cron/lift-lapsed-removals`            | Lift suspensions whose term has ended                                                                               | `*/15 * * * *` |
-| `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run                                | `*/15 * * * *` |
-| `/api/cron/reminders`                       | Send every reminder the registry says is owed (`src/lib/server/reminders/`), then the 9am open-shift digest (#3258) | `*/15 * * * *` |
-| `/api/cron/schedule-radio`                  | Fill the CMC Radio timetable 45 minutes ahead; no-op while `cmcRadio` is off                                        | `*/15 * * * *` |
-| `/api/cron/sweep-door-sales`                | Check in door card sales the webhook missed; report charged intents with no tickets                                 | `*/15 * * * *` |
-| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)                               | `0 16 * * *`   |
-| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                                                | `0 16 * * *`   |
-| `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                                                        | `0 16 * * *`   |
-| `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                                                  | `0 16 * * *`   |
-| `/api/cron/sweep-incidents`                 | Delete incidents over seven years old not marked `retain`; audit each deletion                                      | `0 16 * * *`   |
-| `/api/cron/sweep-contacts`                  | Delete contacts whose `retain_until` has passed                                                                     | `0 16 * * *`   |
-| `/api/cron/open-tasks`                      | Open and close the tasks records call for (repair, restock, orders, 8282, insurance)                                | `0 16 * * *`   |
-| `/api/cron/sweep-audit-log`                 | Delete audit rows over 24 months old; strip name and email from old `user.purged` rows                              | `0 16 * * *`   |
-| `/api/cron/import-partner-calendars`        | Copy partner venues' iCalendar feeds onto the gig guide (`calendar_source`)                                         | `0 16 * * *`   |
-| `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                                                       | `0 16 * * *`   |
-| `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                                               | `0 17 * * MON` |
+| Endpoint                                    | Purpose                                                                                                                                       | Cron (UTC)     |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                                                                         | `*/5 * * * *`  |
+| `/api/cron/send-outbox`                     | Send outbox messages that are due, retrying failed sends with backoff                                                                         | `*/5 * * * *`  |
+| `/api/cron/lock-job-requested`              | Run the daily lock job when staff asked for it (Run now, Retry door codes)                                                                    | `*/5 * * * *`  |
+| `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                                                                                     | `*/15 * * * *` |
+| `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                                                                          | `*/15 * * * *` |
+| `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                                                                       | `*/15 * * * *` |
+| `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                                                                        | `*/15 * * * *` |
+| `/api/cron/lift-lapsed-removals`            | Lift suspensions whose term has ended                                                                                                         | `*/15 * * * *` |
+| `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run                                                          | `*/15 * * * *` |
+| `/api/cron/reminders`                       | Send every reminder the registry says is owed (`src/lib/server/reminders/`), then the 9am open-shift digest (#3258) and in-app digest (#3409) | `*/15 * * * *` |
+| `/api/cron/schedule-radio`                  | Fill the CMC Radio timetable 45 minutes ahead; no-op while `cmcRadio` is off                                                                  | `*/15 * * * *` |
+| `/api/cron/sweep-door-sales`                | Check in door card sales the webhook missed; report charged intents with no tickets                                                           | `*/15 * * * *` |
+| `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)                                                         | `0 16 * * *`   |
+| `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                                                                          | `0 16 * * *`   |
+| `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                                                                                  | `0 16 * * *`   |
+| `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                                                                            | `0 16 * * *`   |
+| `/api/cron/sweep-incidents`                 | Delete incidents over seven years old not marked `retain`; audit each deletion                                                                | `0 16 * * *`   |
+| `/api/cron/sweep-contacts`                  | Delete contacts whose `retain_until` has passed                                                                                               | `0 16 * * *`   |
+| `/api/cron/open-tasks`                      | Open and close the tasks records call for (repair, restock, orders, 8282, insurance)                                                          | `0 16 * * *`   |
+| `/api/cron/sweep-audit-log`                 | Delete audit rows over 24 months old; strip name and email from old `user.purged` rows                                                        | `0 16 * * *`   |
+| `/api/cron/import-partner-calendars`        | Copy partner venues' iCalendar feeds onto the gig guide (`calendar_source`)                                                                   | `0 16 * * *`   |
+| `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                                                                                 | `0 16 * * *`   |
+| `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                                                                         | `0 17 * * MON` |
 
 Each trigger runs its jobs sequentially. The `0 16 * * *` batch (8am PST / 9am PDT) runs
 generation first, so freshly generated occurrences are visible to lock provisioning. Each

@@ -71,7 +71,56 @@ export async function seedNotifications(users: SeedUser[]) {
 		}
 	}
 
+	rows.push(...(await seedDigestRows(users[0])));
+
 	return rows;
+}
+
+/**
+ * Held notices and the summary that lists them (#3409), for one member: two
+ * from yesterday already summarised, and two since, waiting for tomorrow's pass.
+ * The bell shows the summary and none of the four.
+ */
+async function seedDigestRows(member: SeedUser) {
+	const hoursAgo = (h: number) => new Date(Date.now() - h * 3600000);
+	const held = (type: string, title: string, href: string, createdAt: Date) => ({
+		userId: member.id,
+		type,
+		title,
+		href,
+		data: { heldForDigest: true },
+		createdAt
+	});
+	const summarised = await db
+		.insert(notification)
+		.values([
+			held('membership_receipt', 'Membership payment received', '/member/account', hoursAgo(30)),
+			held('task_assigned', 'Task assigned: Restock the lobby', '/member/tasks', hoursAgo(28))
+		])
+		.returning();
+	const waiting = await db
+		.insert(notification)
+		.values([
+			held('equipment_returned', 'Equipment returned', '/member/equipment', hoursAgo(4)),
+			held('volunteer_hours_approved', 'Volunteer hours approved', '/member/volunteer', hoursAgo(2))
+		])
+		.returning();
+	const [summary] = await db
+		.insert(notification)
+		.values({
+			userId: member.id,
+			type: 'notification_digest',
+			title: 'Daily summary',
+			body: '2 notices',
+			data: {
+				ids: summarised.map((r) => r.id),
+				items: summarised.map((r) => ({ title: r.title, href: r.href })),
+				count: summarised.length
+			},
+			createdAt: hoursAgo(1)
+		})
+		.returning();
+	return [...summarised, ...waiting, summary];
 }
 
 export async function seedNotificationPreferences(users: SeedUser[]) {

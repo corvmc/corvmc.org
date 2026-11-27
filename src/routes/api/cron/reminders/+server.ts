@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import * as env from '$app/env/private';
 import { drainReminders } from '#lib/server/reminders/drain.js';
+import { sendInAppDigest } from '#lib/server/notification/digest.js';
 import { announceOpenShifts } from '#lib/server/volunteer/open-shift-fanout.js';
 import { captureException } from '#lib/server/sentry.js';
 
@@ -34,5 +35,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		captureException(err, { event: 'volunteer.shift_opened' });
 		openShifts = { failed: true };
 	}
-	return Response.json({ ...reminders, openShifts });
+	// The in-app digest (#3409): held notices, one summary row per member, same
+	// 9am latch. In-app only, so a failure here never touches the email above.
+	let inAppDigest: Awaited<ReturnType<typeof sendInAppDigest>> | { failed: true };
+	try {
+		inAppDigest = await sendInAppDigest();
+	} catch (err) {
+		captureException(err, { event: 'notification.in_app_digest' });
+		inAppDigest = { failed: true };
+	}
+	return Response.json({ ...reminders, openShifts, inAppDigest });
 };
