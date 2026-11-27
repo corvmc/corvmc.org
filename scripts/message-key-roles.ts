@@ -6,9 +6,11 @@
  * per role with the same text, and deletes a key nothing reads. It is
  * idempotent: re-run it after a rebase rather than resolving a conflict by hand.
  */
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import * as tsParser from '@typescript-eslint/parser';
 import { parseForESLint as parseSvelte } from 'svelte-eslint-parser';
 import {
@@ -343,8 +345,31 @@ function catalogFiles(): string[] {
 	);
 }
 
+/**
+ * Parsing ~700 files is the whole cost, and it runs about three times slower inside
+ * vitest's vm pool than in plain node. So shards of the file list are parsed in plain
+ * node child processes, side by side, and hand back their references as JSON.
+ */
+async function referencesOf(sources: string[]): Promise<Reference[]> {
+	const shards = Math.min(4, availableParallelism());
+	const chunks = Array.from({ length: shards }, (_, i) =>
+		sources.filter((_f, n) => n % shards === i)
+	);
+	const run = promisify(execFile);
+	const out = await Promise.all(
+		chunks.map((files) =>
+			run(
+				process.execPath,
+				['--import', 'tsx', join(ROOT, 'scripts/message-key-roles.ts'), '--refs', ...files],
+				{ cwd: ROOT, maxBuffer: 256 * 1024 * 1024 }
+			)
+		)
+	);
+	return out.flatMap(({ stdout }) => JSON.parse(stdout) as Reference[]);
+}
+
 /** The plan for the checkout as it stands: every reference under `src/` against the catalog. */
-export function planRepo() {
+export async function planRepo() {
 	const sources = execFileSync('git', ['grep', '-lE', 'paraglide/messages', '--', 'src'], {
 		cwd: ROOT,
 		encoding: 'utf8'
@@ -352,7 +377,7 @@ export function planRepo() {
 		.trim()
 		.split('\n')
 		.filter((f) => !f.startsWith('src/lib/paraglide/'));
-	const refs = sources.flatMap((f) => referencesIn(f, readFileSync(join(ROOT, f), 'utf8')));
+	const refs = await referencesOf(sources);
 	const usage = usageOf(refs);
 	const catalogs = catalogFiles().map((path) => ({
 		path,
@@ -371,8 +396,8 @@ export const renamesIn = (renames: Plan['renames']) =>
 		.filter(([key, names]) => names.size > 1 || !hasName(names, key))
 		.map(([key, names]) => `${key} -> ${[...names.values()].join(' ')}`);
 
-function main() {
-	const { refs, usage, catalogs, renames, deleted } = planRepo();
+async function main() {
+	const { refs, usage, catalogs, renames, deleted } = await planRepo();
 	const dry = process.argv.includes('--dry');
 	const owner = new Map<string, string>();
 	for (const { path, json } of catalogs)
@@ -422,4 +447,10 @@ function main() {
 
 const hasName = (names: Map<Role, string>, key: string) => [...names.values()].includes(key);
 
-if (process.argv[1] === import.meta.filename) main();
+if (process.argv[1] === import.meta.filename) {
+	if (process.argv[2] === '--refs') {
+		const files = process.argv.slice(3);
+		const refs = files.flatMap((f) => referencesIn(f, readFileSync(join(ROOT, f), 'utf8')));
+		process.stdout.write(JSON.stringify(refs));
+	} else await main();
+}
