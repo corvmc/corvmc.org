@@ -122,11 +122,11 @@ describe('plan', () => {
 
 // #2640: drift is caught at the PR that causes it, not by the next PR to run the script.
 describe('the catalog', () => {
-	it('names every key for the role it plays and holds no unused key', () => {
-		const { renames, deleted } = planRepo();
+	it('names every key for the role it plays and holds no unused key', async () => {
+		const { renames, deleted } = await planRepo();
 		expect({ renamed: renamesIn(renames), unused: deleted }, 'run `pnpm messages:roles`').toEqual({
 			renamed: [],
 			unused: []
 		});
-	}, 120_000);
+	}, 60_000);
 });
