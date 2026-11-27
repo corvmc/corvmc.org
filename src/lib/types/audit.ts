@@ -12,6 +12,9 @@ export const auditActions = [
 	'reservation.refunded',
 	'reservation.payment_reminder',
 	'reservation.cleared_through_band',
+	'reservation.door_code_assigned',
+	'reservation.door_code_cleared',
+	'reservation.door_code_failed',
 	'clearance.granted',
 	'clearance.revoked',
 	'orientation.waived',
@@ -174,6 +177,25 @@ export interface AuditDetailsByAction {
 		groupName: string;
 		bandmateUserId: string;
 		bandmateName: string;
+	};
+	/**
+	 * A booking's door code, on the member who booked. Never carries the code: it is
+	 * a secret. `syncedAt` is an ISO time, null while the add is queued at U-tec.
+	 * The actor is System unless staff re-issued it.
+	 */
+	'reservation.door_code_assigned': ReservationWhen & {
+		lockAccessId: string | null;
+		syncedAt: string | null;
+	};
+	/** `ended` is the daily job clearing a past booking; `cancelled` is a revoked one. */
+	'reservation.door_code_cleared': ReservationWhen & {
+		lockAccessId: string | null;
+		reason: 'ended' | 'cancelled';
+	};
+	/** The lock refused an issue or a removal; the code stays as it was. */
+	'reservation.door_code_failed': ReservationWhen & {
+		stage: 'issue' | 'clear';
+		lockAccessId: string | null;
 	};
 	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */
 	'clearance.granted': ClearanceRef & { grantedOn: string; expiresOn: string | null };

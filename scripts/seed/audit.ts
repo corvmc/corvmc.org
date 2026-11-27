@@ -156,6 +156,20 @@ export async function seedAuditLog(
 			details: { ...when(comped), waivedCents: 3000 }
 		},
 		{
+			daysAgo: 7,
+			action: 'reservation.door_code_assigned',
+			subject: subject(byId.get(comped.createdByUserId)!),
+			actor: system,
+			details: { ...when(comped), lockAccessId: '4101', syncedAt: null }
+		},
+		{
+			daysAgo: 6,
+			action: 'reservation.door_code_cleared',
+			subject: subject(byId.get(comped.createdByUserId)!),
+			actor: system,
+			details: { ...when(comped), lockAccessId: '4101', reason: 'ended' }
+		},
+		{
 			daysAgo: 6,
 			action: 'reservation.payment_reminder',
 			subject: subject(byId.get(unpaid.createdByUserId)!),

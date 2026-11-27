@@ -309,10 +309,12 @@ touch prod). Wire it into the deploy:
    **Account → D1 → Edit**). `CLOUDFLARE_DATABASE_ID` is not needed — `drizzle.config.ts`
    falls back to the `database_id` in `wrangler.toml`.
 
-3. **Workers Builds → Settings → Deploy command:** `npx wrangler deploy && pnpm ci:migrate --after-publish`,
+3. **Workers Builds → Settings → Deploy command**, for production and non-production branches:
+   `pnpm ci:migrate --before-publish && npx wrangler deploy && pnpm ci:migrate --after-publish`,
    and the build variable `CMC_MIGRATE_AFTER_PUBLISH=1`. A batch of pending migrations that
-   only drops then runs after publish instead of before it; see
-   [operations manual §1](operations-manual.md#1-how-deploys-work).
+   only drops then runs after publish instead of before it; with the variable unset it fails the
+   build. `--before-publish` refuses to publish a build older than production's schema (#3411).
+   See [operations manual §1](operations-manual.md#1-how-deploys-work).
 
 4. **Workers Builds → Build environment variables:** `SENTRY_AUTH_TOKEN`, as a secret. It is
    an organization token with the `org:ci` scope, the same kind `.env.sentry-build-plugin`

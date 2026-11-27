@@ -209,7 +209,11 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
   into `confirmed` called `announceConfirmed()`; the settle paths must not (#2502).
 - **Booked inside the lead days but no door code** → the confirm-time mint failed; look for
   `Failed to provision lock access on confirm` in the logs. The next daily lock job (or Run now
-  in Staff Settings, or re-issue on the staff reservation page) mints it.
+  in Staff Settings, or re-issue on the staff reservation page) mints it. The reservation's lock
+  columns are blanked once a booking ends or is cancelled, so whether a code was ever issued is
+  read from the audit log: `reservation.door_code_assigned`, `_cleared` and `_failed`, written by
+  `lock/lock-audit.ts` on the member who booked. A row names the lock access id, never the code
+  (#3425). Not a column on the reservation, because the clear is what erased the history.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.
